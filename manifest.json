@@ -1,12 +1,19 @@
 {
   "name": "Pocket Novels",
   "short_name": "PocketNovels",
+  "description": "Read and write your favorite web novels on the go.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#6366f1",
   "orientation": "portrait",
   "icons": [
+    {
+      "src": "https://images.unsplash.com/photo-1532012197267-da84d127e765?w=192&auto=format&fit=crop",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
     {
       "src": "https://images.unsplash.com/photo-1532012197267-da84d127e765?w=512&auto=format&fit=crop",
       "sizes": "512x512",
