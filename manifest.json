@@ -9,13 +9,13 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://upload.wikimedia.org/wikipedia/commons/3/3a/Book-icon-%28closed%29.png",
+      "src": "https://www.pwabuilder.com/assets/images/icon_512.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "https://upload.wikimedia.org/wikipedia/commons/3/3a/Book-icon-%28closed%29.png",
+      "src": "https://www.pwabuilder.com/assets/images/icon_512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
