@@ -112,6 +112,23 @@
         .reader-controls { display: flex; gap: 10px; align-items: center; }
         .theme-dot { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid #fff; }
     </style>
+    <!-- Firebase SDK Compatibility Scripts -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDtlWzh0-qEfPzmT7dia5F4mnJ_oKsj5wA",
+    authDomain: "pocket-novels-ec014.firebaseapp.com",
+    projectId: "pocket-novels-ec014",
+    storageBucket: "pocket-novels-ec014.firebasestorage.app",
+    messagingSenderId: "136400612026",
+    appId: "1:136400612026:web:cc5873486f06a5a1533083"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
 </head>
 <body>
 
@@ -924,6 +941,30 @@ readerContainer.dir = currentNovel.alignment === 'rtl' ? 'rtl' : 'ltr';
         updateProfileUI();
         const lastView = localStorage.getItem('pocket_last_view') || 'exploreView';
         switchView(lastView);
+        async function saveNovelsToCloud(novelsData) {
+  try {
+    await db.collection("appData").doc("userNovels").set({
+      novels: novelsData,
+      lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    console.log("Novels successfully saved to cloud!");
+  } catch (error) {
+    console.error("Error saving to Firestore: ", error);
+  }
+}
+
+async function loadNovelsFromCloud() {
+  try {
+    const doc = await db.collection("appData").doc("userNovels").get();
+    if (doc.exists) {
+      return doc.data().novels;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error loading from Firestore: ", error);
+    return null;
+  }
+}
     </script>
 </body>
 </html>
