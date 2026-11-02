@@ -459,12 +459,29 @@
             }
         ];
 
-        // Initialize novels with samples if localStorage is completely empty
-        let novels = JSON.parse(localStorage.getItem('pocket_novels'));
-        if (!novels || novels.length === 0) {
-            novels = defaultSampleNovels;
+        // Initialize novels from cloud or localStorage
+let novels = defaultSampleNovels;
+
+// Load data asynchronously on startup
+async function initCloudData() {
+    const cloudNovels = await loadNovelsFromCloud();
+    if (cloudNovels && cloudNovels.length > 0) {
+        novels = cloudNovels;
+        localStorage.setItem('pocket_novels', JSON.stringify(novels));
+    } else {
+        const localNovels = JSON.parse(localStorage.getItem('pocket_novels'));
+        if (localNovels && localNovels.length > 0) {
+            novels = localNovels;
+        } else {
             localStorage.setItem('pocket_novels', JSON.stringify(novels));
         }
+    }
+    // Refresh library view after cloud data arrives
+    if (typeof renderLibrary === 'function') renderLibrary();
+}
+
+// Run the cloud sync on startup
+initCloudData();
 
         let savedBookmarks = JSON.parse(localStorage.getItem('pocket_bookmarks')) || [];
         let authorBios = JSON.parse(localStorage.getItem('pocket_author_bios')) || {};
@@ -490,6 +507,7 @@
             authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture };
             localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
             if(readingProgress) localStorage.setItem('pocket_reading_progress', JSON.stringify(readingProgress));
+                saveNovelsToCloud(novels);
         }
 
         function updateProfileUI() {
