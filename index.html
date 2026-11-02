@@ -23,7 +23,12 @@
             --radius-lg: 20px;
             --reader-bg: #121212;
             --reader-text: #e0e0e0;
+            --reader-font-size: 18px;
         }
+
+        body.theme-light { --reader-bg: #f8fafc; --reader-text: #1e293b; }
+        body.theme-sepia { --reader-bg: #fbf0d9; --reader-text: #5f4b32; }
+        body.theme-dark { --reader-bg: #18181b; --reader-text: #d4d4d8; }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
         body { background-color: var(--bg-body); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
@@ -54,6 +59,8 @@
         .view-section { display: none; }
         .view-section.active { display: block; }
 
+        .continue-banner { background: var(--gradient-primary); border-radius: var(--radius-md); padding: 1.2rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); }
+        
         .genre-filters { display: flex; gap: 8px; overflow-x: auto; padding: 0.5rem 0 1.2rem 0; white-space: nowrap; scrollbar-width: none; }
         .genre-filters::-webkit-scrollbar { display: none; }
         .genre-tab { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-muted); padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; flex-shrink: 0; }
@@ -93,7 +100,6 @@
         .profile-name { font-size: 1.5rem; font-weight: 800; margin-bottom: 4px; }
         .profile-bio { color: var(--text-muted); font-size: 0.9rem; line-height: 1.4; margin-bottom: 10px; }
 
-        /* Admin Dashboard table */
         .admin-table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: var(--bg-card); border-radius: 8px; overflow: hidden; }
         .admin-table th, .admin-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; }
         .admin-table th { background: rgba(99, 102, 241, 0.2); color: var(--primary-light); font-weight: 700; }
@@ -101,7 +107,10 @@
         .reader-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--reader-bg); color: var(--reader-text); z-index: 1000; display: none; flex-direction: column; }
         .reader-container.active { display: flex; }
         .reader-header, .reader-footer { padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
-        .reader-content { flex: 1; overflow-y: auto; padding: 3rem 1.5rem; max-width: 750px; margin: 0 auto; width: 100%; font-family: 'Lora', serif; font-size: 18px; line-height: 1.8; }
+        .reader-content { flex: 1; overflow-y: auto; padding: 3rem 1.5rem; max-width: 750px; margin: 0 auto; width: 100%; font-family: 'Lora', serif; font-size: var(--reader-font-size); line-height: 1.8; }
+        
+        .reader-controls { display: flex; gap: 10px; align-items: center; }
+        .theme-dot { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid #fff; }
     </style>
 </head>
 <body>
@@ -128,6 +137,8 @@
     <main>
         <!-- EXPLORE VIEW -->
         <section id="exploreView" class="view-section active">
+            <div id="continueReadingContainer"></div>
+
             <h2>Published Novels</h2>
             <div class="genre-filters">
                 <button class="genre-tab active" onclick="filterByGenre('All', this)">All</button>
@@ -225,9 +236,7 @@
                                 <th>Published Stories</th>
                             </tr>
                         </thead>
-                        <tbody id="adminAuthorsTableBody">
-                            <!-- Populated dynamically -->
-                        </tbody>
+                        <tbody id="adminAuthorsTableBody"></tbody>
                     </table>
                 </div>
             </div>
@@ -266,12 +275,12 @@
 
         <!-- PUBLIC AUTHOR PROFILE VIEW -->
         <section id="authorPublicView" class="view-section">
-            <button class="btn btn-secondary" onclick="switchView('exploreView', true)" style="margin-bottom: 1.5rem;"><i class="fa-solid fa-arrow-left"></i> Back to Explore</button>
+            <button class="btn btn-secondary" onclick="switchView('exploreView', true)" style="margin-bottom: 1.5rem;"><i class="fa-solid fa-arrow-left"></i> Back</button>
             <div class="profile-card">
                 <div class="profile-pic" id="publicAuthorPic"><span id="publicAuthorInitials">AU</span></div>
                 <div class="profile-details">
                     <div class="profile-name" id="publicAuthorName">Author Name</div>
-                    <div class="profile-bio" id="publicAuthorBio">Author bio goes here.</div>
+                    <div class="profile-bio" id="publicAuthorBio">Bio goes here.</div>
                 </div>
             </div>
             <h3>Books by this Author</h3>
@@ -305,7 +314,13 @@
         <div class="reader-header">
             <button class="btn btn-secondary" onclick="closeReader()"><i class="fa-solid fa-xmark"></i></button>
             <div id="readerHeaderTitle" style="font-weight: 700;">Chapter 1</div>
-            <div></div>
+            <div class="reader-controls">
+                <div class="theme-dot" style="background: #18181b;" onclick="setReaderTheme('dark')" title="Dark Theme"></div>
+                <div class="theme-dot" style="background: #fbf0d9;" onclick="setReaderTheme('sepia')" title="Sepia Theme"></div>
+                <div class="theme-dot" style="background: #f8fafc;" onclick="setReaderTheme('light')" title="Light Theme"></div>
+                <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="changeFontSize(2)">A+</button>
+                <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="changeFontSize(-2)">A-</button>
+            </div>
         </div>
         <div class="reader-content" id="readerText"></div>
         <div class="reader-footer">
@@ -318,8 +333,8 @@
     <script>
         let novels = JSON.parse(localStorage.getItem('pocket_novels')) || [];
         let savedBookmarks = JSON.parse(localStorage.getItem('pocket_bookmarks')) || [];
-        // Store multiple known author bios locally
         let authorBios = JSON.parse(localStorage.getItem('pocket_author_bios')) || {};
+        let readingProgress = JSON.parse(localStorage.getItem('pocket_reading_progress')) || null;
         
         let userProfile = JSON.parse(localStorage.getItem('pocket_user_profile')) || {
             name: "Author Name",
@@ -332,6 +347,7 @@
         let uploadedProfilePicUrl = userProfile.picture || "";
         let currentNovel = null;
         let currentChapterIdx = 0;
+        let currentFontSize = 18;
 
         function saveToStorage() {
             localStorage.setItem('pocket_novels', JSON.stringify(novels));
@@ -339,6 +355,7 @@
             localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
             authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture };
             localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
+            if(readingProgress) localStorage.setItem('pocket_reading_progress', JSON.stringify(readingProgress));
         }
 
         function updateProfileUI() {
@@ -364,7 +381,6 @@
             const tableBody = document.getElementById('adminAuthorsTableBody');
             if(!tableBody) return;
 
-            // Extract unique authors from novels + current user
             const authorsMap = {};
             novels.forEach(n => {
                 if(!authorsMap[n.author]) {
@@ -372,7 +388,6 @@
                 }
                 authorsMap[n.author].count++;
             });
-            // Ensure current user is listed even if 0 books
             if(!authorsMap[userProfile.name]) {
                 authorsMap[userProfile.name] = { count: 0, bio: userProfile.bio };
             }
@@ -434,7 +449,10 @@
             document.getElementById(viewId).classList.add('active');
 
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            if(viewId === 'exploreView') document.getElementById('navExplore').classList.add('active');
+            if(viewId === 'exploreView') {
+                document.getElementById('navExplore').classList.add('active');
+                renderContinueReading();
+            }
             if(viewId === 'libraryView') document.getElementById('navLibrary').classList.add('active');
             if(viewId === 'studioView') document.getElementById('navStudio').classList.add('active');
 
@@ -443,6 +461,38 @@
             if(viewId === 'profileView') renderProfileBooks();
 
             if(saveState) localStorage.setItem('pocket_last_view', viewId);
+        }
+
+        function renderContinueReading() {
+            const container = document.getElementById('continueReadingContainer');
+            if(!readingProgress || !novels.length) {
+                container.innerHTML = '';
+                return;
+            }
+            const novel = novels.find(n => n.id === readingProgress.novelId);
+            if(!novel) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="continue-banner">
+                    <div>
+                        <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; opacity: 0.8;">Continue Reading</div>
+                        <div style="font-size: 1.1rem; font-weight: 800; margin: 2px 0;">${novel.title}</div>
+                        <div style="font-size: 0.85rem; opacity: 0.9;">Chapter ${readingProgress.chapterIdx + 1}: ${novel.chapters[readingProgress.chapterIdx].title}</div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="resumeReading()"><i class="fa-solid fa-play"></i> Resume</button>
+                </div>
+            `;
+        }
+
+        function resumeReading() {
+            if(!readingProgress) return;
+            currentNovel = novels.find(n => n.id === readingProgress.novelId);
+            if(currentNovel) {
+                startReading(readingProgress.chapterIdx);
+            }
         }
 
         function filterByGenre(genre, element) {
@@ -498,7 +548,7 @@
                     <div class="novel-info" onclick="openNovelDetail(${n.id})">
                         <div class="novel-title">${n.title}</div>
                     </div>
-                    <div style="padding: 0 0.95rem 0.9rem 0.95rem;">
+                    <div style="padding: 0 0.95rem 0.95rem 0.95rem;">
                         <span class="novel-author" onclick="event.stopPropagation(); openAuthorProfile('${n.author}')">By ${n.author}</span>
                         <div class="novel-stats"><i class="fa-solid fa-book"></i> ${n.chapters.length} Ch</div>
                     </div>
@@ -562,6 +612,7 @@
                 <div style="display: flex; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap;">
                     <button class="btn" onclick="startReading(0)"><i class="fa-solid fa-book-open"></i> Read</button>
                     <button class="btn btn-secondary" onclick="toggleBookmark(${currentNovel.id})"><i class="fa-solid fa-bookmark"></i> ${isBookmarked ? 'Bookmarked' : 'Bookmark'}</button>
+                    <button class="btn btn-secondary" onclick="shareNovel('${currentNovel.title}')"><i class="fa-solid fa-share-nodes"></i> Share</button>
                     ${isAuthor ? `
                         <button class="btn btn-success" onclick="openAddChapterModal()"><i class="fa-solid fa-plus"></i> Add Chapter</button>
                         <button class="btn btn-danger" onclick="deleteNovel(${currentNovel.id})"><i class="fa-solid fa-trash"></i> Delete</button>
@@ -589,6 +640,18 @@
                 </div>
             `;
             switchView('detailView');
+        }
+
+        function shareNovel(title) {
+            if (navigator.share) {
+                navigator.share({
+                    title: title,
+                    text: `Check out "${title}" on Pocket Novels!`,
+                    url: window.location.href
+                }).catch(() => {});
+            } else {
+                alert(`Link copied for "${title}"!`);
+            }
         }
 
         function handleAddComment(e) {
@@ -665,6 +728,8 @@
 
         function startReading(idx) {
             currentChapterIdx = idx;
+            readingProgress = { novelId: currentNovel.id, chapterIdx: idx };
+            saveToStorage();
             document.getElementById('readerModal').classList.add('active');
             updateReader();
         }
@@ -676,9 +741,19 @@
             document.getElementById('readerText').innerHTML = `<h2>${ch.title}</h2><p>${ch.content.replace(/\n/g, '<br><br>')}</p>`;
         }
 
+        function setReaderTheme(theme) {
+            document.body.className = '';
+            if(theme !== 'dark') document.body.classList.add(`theme-${theme}`);
+        }
+
+        function changeFontSize(delta) {
+            currentFontSize = Math.max(14, Math.min(28, currentFontSize + delta));
+            document.documentElement.style.setProperty('--reader-font-size', currentFontSize + 'px');
+        }
+
         function closeReader() { document.getElementById('readerModal').classList.remove('active'); }
-        function nextChapter() { if(currentChapterIdx < currentNovel.chapters.length - 1) { currentChapterIdx++; updateReader(); } }
-        function prevChapter() { if(currentChapterIdx > 0) { currentChapterIdx--; updateReader(); } }
+        function nextChapter() { if(currentChapterIdx < currentNovel.chapters.length - 1) { currentChapterIdx++; readingProgress.chapterIdx = currentChapterIdx; saveToStorage(); updateReader(); } }
+        function prevChapter() { if(currentChapterIdx > 0) { currentChapterIdx--; readingProgress.chapterIdx = currentChapterIdx; saveToStorage(); updateReader(); } }
 
         function toggleBookmark(id) {
             if(savedBookmarks.includes(id)) savedBookmarks = savedBookmarks.filter(b => b !== id);
