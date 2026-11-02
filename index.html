@@ -883,7 +883,7 @@
             document.getElementById('readerHeaderTitle').innerText = ch.title;
             document.getElementById('chapterIndicator').innerText = `Chapter ${currentChapterIdx + 1} of ${currentNovel.chapters.length}`;
             const readerContainer = document.getElementById('readerText');
-readerContainer.innerHTML = `<h2>${ch.title}</h2><p>${ch.content}</p>`;
+readerContainer.innerHTML = `<h2>${ch.title}</h2><div style="white-space: pre-wrap; line-height: 1.8;">${ch.content}</div>`;
 readerContainer.style.textAlign = currentNovel.alignment || 'ltr';
 readerContainer.dir = currentNovel.alignment === 'rtl' ? 'rtl' : 'ltr';
         }
