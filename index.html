@@ -223,26 +223,28 @@
                 </div>
             </div>
 
-            <!-- ADMIN AUTHORS DIRECTORY PANEL (Admin Toggle) -->
-<button class="btn btn-secondary" onclick="toggleAdminDirectory()" style="margin-bottom: 1rem; width: 100%; border: 1px dashed var(--primary-light);">
-    <i class="fa-solid fa-user-shield"></i> Admin: Toggle Authors Directory
-</button>
+            <!-- ADMIN AUTHORS DIRECTORY PANEL (Hidden by default for all users) -->
+<div id="adminSection" style="display: none; margin-bottom: 2rem;">
+    <button class="btn btn-secondary" onclick="toggleAdminDirectory()" style="margin-bottom: 1rem; width: 100%; border: 1px dashed var(--primary-light);">
+        <i class="fa-solid fa-user-shield"></i> Admin: Toggle Authors Directory
+    </button>
 
-<div id="adminDirectoryContainer" style="display: none; margin-bottom: 2rem;">
-    <div class="studio-card">
-        <h3><i class="fa-solid fa-user-shield"></i> Admin: Registered Authors Directory</h3>
-        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 10px;">Track active authors, their bios, and stories.</p>
-        <div style="overflow-x: auto;">
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>Author Name</th>
-                        <th>Bio</th>
-                        <th>Published Stories</th>
-                    </tr>
-                </thead>
-                <tbody id="adminAuthorsTableBody"></tbody>
-            </table>
+    <div id="adminDirectoryContainer" style="display: none; margin-bottom: 2rem;">
+        <div class="studio-card">
+            <h3><i class="fa-solid fa-user-shield"></i> Admin: Registered Authors Directory</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 10px;">Track active authors, their bios, and stories.</p>
+            <div style="overflow-x: auto;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Author Name</th>
+                            <th>Bio</th>
+                            <th>Published Stories</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminAuthorsTableBody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
