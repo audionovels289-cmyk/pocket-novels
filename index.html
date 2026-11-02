@@ -331,7 +331,109 @@
     </div>
 
     <script>
-        let novels = JSON.parse(localStorage.getItem('pocket_novels')) || [];
+                // Pre-loaded starter novels for testing and initial release
+        const defaultSampleNovels = [
+            {
+                id: 1700000001001,
+                title: "The Mystery of the Clockwork Manor",
+                author: "Arthur Vance",
+                genre: "Mystery",
+                language: "English",
+                cover: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=500&q=80",
+                synopsis: "A thrilling detective story set in a foggy Victorian estate where every clock hides a secret.",
+                views: 142,
+                comments: [
+                    { author: "ReaderOne", text: "Great mystery! The dark theme looks wonderful.", date: "2026-06-06" }
+                ],
+                chapters: [
+                    {
+                        number: 1,
+                        title: "Chapter 1: The Midnight Chime",
+                        content: "The heavy fog rolled over the cobblestone courtyard of Manor Blackwood. Inspector Vance adjusted his coat collar against the damp chill. Inside, the grandfather clock had just struck midnight—twelve slow, deliberate notes that seemed to echo through the empty halls.\n\nHe pushed open the heavy oak door. The room was dark, illuminated only by the faint glow of embers in the hearth. Something was terribly wrong."
+                    }
+                ]
+            },
+            {
+                id: 1700000001002,
+                title: "Echoes of the Forgotten Kingdom",
+                author: "Elena Rostova",
+                genre: "Fantasy",
+                language: "English",
+                cover: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=500&q=80",
+                synopsis: "An epic tale of magic, lost thrones, and a young traveler destined to awaken an ancient realm.",
+                views: 215,
+                comments: [],
+                chapters: [
+                    {
+                        number: 1,
+                        title: "Chapter 1: Whispers in the Wind",
+                        content: "The mountains of Eldoria had stood silent for a thousand years. To the villagers below, they were simply jagged peaks touching the sky. But to Lyra, they held a song—a faint, rhythmic hum that only she could hear.\n\nShe gripped her staff tighter as the wind whipped her cloak around her shoulders. Today was the day she would cross the ridge and find out what lay beyond."
+                    }
+                ]
+            },
+            {
+                id: 1700000001003,
+                title: "A Summer in Kyoto",
+                author: "Kenji Sato",
+                genre: "Romance",
+                language: "English",
+                cover: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=500&q=80",
+                synopsis: "A gentle, heartwarming story of two artists finding inspiration and love beneath blooming cherry blossoms.",
+                views: 89,
+                comments: [],
+                chapters: [
+                    {
+                        number: 1,
+                        title: "Chapter 1: The Tea House",
+                        content: "The paper lanterns cast a warm, golden glow across the wooden veranda. Rain tapped softly against the bamboo garden outside, creating a peaceful rhythm that matched the quiet afternoon.\n\nAoi sat with her sketchbook open, charcoal pencil hovering over the paper. She looked up just as the sliding door opened, and a stranger stepped in out of the sudden summer shower."
+                    }
+                ]
+            },
+            {
+                id: 1700000001004,
+                title: "شام کا مسافر (The Evening Traveler)",
+                author: "احمد رضا (Ahmed Raza)",
+                genre: "Romance",
+                language: "Urdu",
+                cover: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=500&q=80",
+                synopsis: "ایک خوبصورت اردو ناول جو محبت، یادوں اور زندگی کے سفر کے گرد گھومتا ہے۔",
+                views: 110,
+                comments: [],
+                chapters: [
+                    {
+                        number: 1,
+                        title: "باب اول: پرانی یادیں",
+                        content: "سورج ڈوب رہا تھا اور آسمان پر نارنجی اور سرمئی رنگوں کا ایک حسین امتزاج بکھرا ہوا تھا۔ ریلوے اسٹیشن کے پلیٹ فارم پر مسافروں کا ہجوم کم ہو رہا تھا جب اس نے پہلی بار وہ پرانی آواز سنی۔\n\nوقت جیسے تھم گیا ہو، اور ماضی کے دریچے ایک بار پھر کھل گئے ہوں..."
+                    }
+                ]
+            },
+            {
+                id: 1700000001005,
+                title: "خوابوں کی بستی (City of Dreams)",
+                author: "فاطمہ خان (Fatima Khan)",
+                genre: "Fantasy",
+                language: "Urdu",
+                cover: "https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=500&q=80",
+                synopsis: "ایک طلسماتی دنیا کی کہانی جہاں خواب حقیقت کا روپ دھار لیتے ہیں۔",
+                views: 178,
+                comments: [],
+                chapters: [
+                    {
+                        number: 1,
+                        title: "باب اول: ان کہی کہانیاں",
+                        content: "رات کے اس پہر جب پوری بستی گہری نیند سو رہی تھی، کتابوں کے پرانے صندوق سے ہلکی سی روشنی نکلنے لگی۔ علی نے حیرت سے آگے بڑھ کر صندوق کا ڈھکن اٹھایا۔\n\nان اندر رکھی ہوئی سنہری جلد والی کتاب کے صفحات خود بخود پلٹنے لگے تھے..."
+                    }
+                ]
+            }
+        ];
+
+        // Initialize novels with samples if localStorage is completely empty
+        let novels = JSON.parse(localStorage.getItem('pocket_novels'));
+        if (!novels || novels.length === 0) {
+            novels = defaultSampleNovels;
+            localStorage.setItem('pocket_novels', JSON.stringify(novels));
+        }
+
         let savedBookmarks = JSON.parse(localStorage.getItem('pocket_bookmarks')) || [];
         let authorBios = JSON.parse(localStorage.getItem('pocket_author_bios')) || {};
         let readingProgress = JSON.parse(localStorage.getItem('pocket_reading_progress')) || null;
