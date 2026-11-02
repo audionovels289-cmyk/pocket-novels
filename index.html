@@ -223,23 +223,29 @@
                 </div>
             </div>
 
-            <!-- ADMIN AUTHORS DIRECTORY PANEL -->
-            <div class="studio-card" style="margin-bottom: 2rem;">
-                <h3><i class="fa-solid fa-user-shield"></i> Admin: Registered Authors Directory</h3>
-                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 10px;">Track active authors, their bios, and total stories published.</p>
-                <div style="overflow-x: auto;">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th>Author Name</th>
-                                <th>Bio</th>
-                                <th>Published Stories</th>
-                            </tr>
-                        </thead>
-                        <tbody id="adminAuthorsTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
+            <!-- ADMIN AUTHORS DIRECTORY PANEL (Admin Toggle) -->
+<button class="btn btn-secondary" onclick="toggleAdminDirectory()" style="margin-bottom: 1rem; width: 100%; border: 1px dashed var(--primary-light);">
+    <i class="fa-solid fa-user-shield"></i> Admin: Toggle Authors Directory
+</button>
+
+<div id="adminDirectoryContainer" style="display: none; margin-bottom: 2rem;">
+    <div class="studio-card">
+        <h3><i class="fa-solid fa-user-shield"></i> Admin: Registered Authors Directory</h3>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 10px;">Track active authors, their bios, and stories.</p>
+        <div style="overflow-x: auto;">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Author Name</th>
+                        <th>Bio</th>
+                        <th>Published Stories</th>
+                    </tr>
+                </thead>
+                <tbody id="adminAuthorsTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
             <!-- EDIT PROFILE CARD -->
             <div class="studio-card" id="editProfileCard" style="display: none; margin-bottom: 2rem;">
@@ -478,6 +484,18 @@
             }
             renderAdminAuthorsTable();
         }
+
+        function toggleAdminDirectory() {
+    const container = document.getElementById('adminDirectoryContainer');
+    if (container.style.display === 'none' || container.style.display === '') {
+        if (typeof renderAdminAuthorsTable === 'function') {
+            renderAdminAuthorsTable();
+        }
+        container.style.display = 'block';
+    } else {
+        container.style.display = 'none';
+    }
+}
 
         function renderAdminAuthorsTable() {
             const tableBody = document.getElementById('adminAuthorsTableBody');
