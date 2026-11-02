@@ -241,12 +241,12 @@
             <h3><i class="fa-solid fa-user-shield"></i> Admin: Registered Authors Directory</h3>
             <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 10px;">Track active authors, their bios, and stories.</p>
             <div style="overflow-x: auto;">
-                <table class="admin-table">
+                <table class="admin-table" style="width: 100%; border-collapse: collapse;">
                     <thead>
-                        <tr>
-                            <th>Author Name</th>
-                            <th>Bio</th>
-                            <th>Published Stories</th>
+                        <tr style="text-align: left; border-bottom: 1px solid var(--border-color);">
+                            <th style="padding: 8px;">Author Name</th>
+                            <th style="padding: 8px;">Bio</th>
+                            <th style="padding: 8px;">Published Stories</th>
                         </tr>
                     </thead>
                     <tbody id="adminAuthorsTableBody"></tbody>
@@ -491,7 +491,15 @@
                 picContainer.innerHTML = `<span>${initials}</span>`;
                 headerAvatar.innerHTML = `<span>${initials}</span>`;
             }
+                const adminSection = document.getElementById('adminSection');
+    if (adminSection) {
+        if (userProfile.name === "Ujala Naz") {
+            adminSection.style.display = 'block';
             renderAdminAuthorsTable();
+        } else {
+            adminSection.style.display = 'none';
+        }
+    }
         }
 
         function toggleAdminDirectory() {
