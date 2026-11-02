@@ -687,7 +687,10 @@
                     </div>
                     <div style="padding: 0 0.95rem 0.95rem 0.95rem;">
                         <span class="novel-author" onclick="event.stopPropagation(); openAuthorProfile('${n.author}')">By ${n.author}</span>
-                        <div class="novel-stats"><i class="fa-solid fa-book"></i> ${n.chapters.length} Ch</div>
+                                            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <div class="novel-stats"><i class="fa-solid fa-eye"></i> ${n.views || 0} views</div>
+                        <div class="novel-stats"><i class="fa-solid fa-book"></i> ${n.chapters ? n.chapters.length : 0} Chapters</div>
+                    </div>
                     </div>
                 </div>
             `).join('');
