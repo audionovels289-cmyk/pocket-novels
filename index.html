@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pocket Novels - Read & Write Stories</title>
-    <link rel="manifest" href="manifest.json">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
     <style>
         :root {
             --primary: #6366f1;
@@ -311,6 +311,7 @@
                 <div class="profile-details">
                     <div class="profile-name" id="profileNameDisplay">Author Name</div>
                     <div class="profile-bio" id="profileBioDisplay">No bio added yet. Tap "Edit Profile" below to write your author bio.</div>
+                    <p style="color: var(--primary-light); font-size: 0.85rem; margin-bottom: 10px;" id="profileBookmarkStats"><i class="fa-solid fa-bookmark"></i> 0 Bookmarked Novels</p>
                     <button class="btn btn-secondary" onclick="toggleEditProfile()"><i class="fa-solid fa-user-pen"></i> Edit Profile</button>
                 </div>
             </div>
@@ -408,6 +409,7 @@
         function updateProfileUI() {
             document.getElementById('profileNameDisplay').innerText = userProfile.name;
             document.getElementById('profileBioDisplay').innerText = userProfile.bio;
+            document.getElementById('profileBookmarkStats').innerHTML = `<i class="fa-solid fa-bookmark"></i> ${savedBookmarks.length} Bookmarked Novels`;
             
             const picContainer = document.getElementById('profilePicContainer');
             const headerAvatar = document.getElementById('headerAvatar');
@@ -511,7 +513,7 @@
                 );
             }
 
-            renderGrid(filtered);
+            renderGrid(filtered, 'novelGrid');
         }
 
         function previewGalleryImage(event) {
@@ -528,10 +530,12 @@
             }
         }
 
-        function renderGrid(dataset) {
-            const grid = document.getElementById('novelGrid');
+        function renderGrid(dataset, targetContainerId = 'novelGrid') {
+            const grid = document.getElementById(targetContainerId);
+            if(!grid) return;
+
             if(dataset.length === 0) {
-                grid.innerHTML = `<p style="color: var(--text-muted); grid-column: 1/-1;">No novels found in this category.</p>`;
+                grid.innerHTML = `<p style="color: var(--text-muted); grid-column: 1/-1;">No novels found in this section.</p>`;
                 return;
             }
             grid.innerHTML = dataset.map(n => `
@@ -576,7 +580,7 @@
                 
                 <div style="display: flex; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap;">
                     <button class="btn" onclick="startReading(0)"><i class="fa-solid fa-book-open"></i> Read</button>
-                    <button class="btn btn-secondary" onclick="toggleBookmark(${currentNovel.id})">${isBookmarked ? 'Bookmarked' : 'Bookmark'}</button>
+                    <button class="btn btn-secondary" onclick="toggleBookmark(${currentNovel.id})"><i class="fa-solid fa-bookmark"></i> ${isBookmarked ? 'Bookmarked' : 'Bookmark'}</button>
                     ${isAuthor ? `
                         <button class="btn btn-success" onclick="openAddChapterModal()"><i class="fa-solid fa-plus"></i> Add New Chapter</button>
                         <button class="btn btn-danger" onclick="deleteNovel(${currentNovel.id})"><i class="fa-solid fa-trash"></i> Delete Novel</button>
@@ -715,18 +719,23 @@
         function prevChapter() { if(currentChapterIdx > 0) { currentChapterIdx--; updateReader(); } }
 
         function toggleBookmark(id) {
-            if(savedBookmarks.includes(id)) savedBookmarks = savedBookmarks.filter(b => b !== id);
-            else savedBookmarks.push(id);
+            if(savedBookmarks.includes(id)) {
+                savedBookmarks = savedBookmarks.filter(b => b !== id);
+            } else {
+                savedBookmarks.push(id);
+            }
             saveToStorage();
+            updateProfileUI();
             openNovelDetail(id);
         }
 
         function renderLibrary() {
             const bookmarked = novels.filter(n => savedBookmarks.includes(n.id));
-            renderGrid(bookmarked);
+            renderGrid(bookmarked, 'libraryGrid');
         }
 
         function renderProfileBooks() {
+            updateProfileUI();
             const myBooks = novels.filter(n => n.author.trim().toLowerCase() === userProfile.name.trim().toLowerCase());
             const grid = document.getElementById('myPublishedGrid');
             if(myBooks.length === 0) {
