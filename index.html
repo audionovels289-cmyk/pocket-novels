@@ -578,22 +578,35 @@ initCloudData();
 let currentUser = null;
 
 // Initialize Auth state listener
-firebase.auth().onAuthStateChanged((user) => {
+// Initialize auth state listener
+firebase.auth().onAuthStateChanged(async (user) => {
   currentUser = user;
   const authBtn = document.getElementById('authBtn');
   
   if (user) {
     console.log("Logged in as:", user.email || user.displayName);
     if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
-    loadUserNovelsFromCloud(user.uid);
+    
+    // Sync any existing local novels up to the cloud first
+    await syncLocalNovelsToCloud();
+    
+    // Then load the cloud data into the app
+    const cloudNovels = await loadNovelsFromCloud();
+    if (cloudNovels) {
+      novels = cloudNovels;
+      localStorage.setItem('pocket_novels', JSON.stringify(novels));
+    }
+    if (typeof renderLibrary === 'function') renderLibrary();
   } else {
     console.log("No user signed in. Using local/default novels.");
-    if (authBtn) authBtn.innerHTML = '<i class="fa-brands fa-google"></i> Sign In';
+    if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign In';
     const localNovels = JSON.parse(localStorage.getItem('pocket_novels'));
     novels = (localNovels && localNovels.length > 0) ? localNovels : defaultSampleNovels;
     if (typeof renderLibrary === 'function') renderLibrary();
   }
+  updateProfileUI();
 });
+
 // Toggle login/logout when the header button is clicked
 // Toggle login/logout or offer sign-in options when header button is clicked
 // Open the custom auth modal or sign out if already logged in
