@@ -173,7 +173,45 @@
 .auth-action-btn.primary:hover { background: #2ea043; }
 .auth-action-btn.secondary { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
 .auth-action-btn.secondary:hover { background: #30363d; }
+/* Modern Wattpad-style Compact Novel Grid */
+.novels-grid, .novel-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 12px;
+}
 
+.novel-card {
+  background: #1e293b;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.novel-card img {
+  width: 100%;
+  height: 140px; 
+  object-fit: cover;
+}
+
+.novel-card-content {
+  padding: 8px;
+}
+
+.novel-card h3 {
+  font-size: 13px;
+  margin: 0 0 4px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.novel-card p, .novel-card span {
+  font-size: 11px;
+  color: #94a3b8;
+}
     </style>
     <!-- Firebase SDK Compatibility Scripts -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
