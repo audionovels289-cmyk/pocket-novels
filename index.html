@@ -661,7 +661,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
         try {
             // Fetch saved profile from Firestore
-            const userDoc = await db.collection("users").doc(user.uid).get();
+            const userDoc = await db.collection("appData").doc("userProfile_" + user.uid).get();
             if (userDoc.exists) {
                 const data = userDoc.data();
                 userProfile.name = data.name || user.displayName || "Anonymous Author";
@@ -956,19 +956,19 @@ async function loadUserNovelsFromCloud(uid) {
     updateProfileUI();
     toggleEditProfile();
 
-    // --- SAVE TO FIRESTORE CLOUD ---
+    // --- SAVE TO FIRESTORE CLOUD (appData) ---
     if (currentUser) {
         try {
-            await db.collection("users").doc(currentUser.uid).set({
+            await db.collection("appData").doc("userProfile_" + currentUser.uid).set({
                 name: userProfile.name,
                 bio: userProfile.bio,
                 facebookUrl: userProfile.facebookUrl,
                 photoURL: userProfile.picture,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
-            console.log("Profile updated in Firestore!");
+            console.log("Profile updated in appData!");
         } catch (err) {
-            console.error("Error saving profile to Firestore:", err);
+            console.error("Error saving profile to appData:", err);
         }
     }
 
