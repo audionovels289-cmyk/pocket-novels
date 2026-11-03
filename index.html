@@ -650,48 +650,56 @@ initCloudData();
 let currentUser = null;
 
 // Initialize Auth state listener
-// Initialize auth state listener
+// Initialize Auth state listener
 firebase.auth().onAuthStateChanged(async (user) => {
-  currentUser = user;
-  const authBtn = document.getElementById('authBtn');
-  
-      if (user) {
+    currentUser = user;
+    const authBtn = document.getElementById('authBtn');
+
+    if (user) {
         console.log("Logged in as:", user.email || user.displayName);
         if (authBtn) authBtn.innerHTML = `<i class="fa-solid fa-right-from-bracket"></i> Sign Out`;
 
-        // Fetch user profile from Firestore
         try {
+            // Fetch saved profile from Firestore
             const userDoc = await db.collection("users").doc(user.uid).get();
             if (userDoc.exists) {
                 const data = userDoc.data();
-                userProfile.name = data.name || user.displayName || "Author Name";
+                userProfile.name = data.name || user.displayName || "Anonymous Author";
+                userProfile.email = data.email || user.email || "";
                 userProfile.bio = data.bio || "";
                 userProfile.picture = data.photoURL || data.picture || user.photoURL || "";
                 userProfile.facebookUrl = data.facebookUrl || "";
+            } else {
+                userProfile.name = user.displayName || "Anonymous Author";
+                userProfile.email = user.email || "";
+                userProfile.picture = user.photoURL || "";
+                userProfile.bio = "";
+                userProfile.facebookUrl = "";
             }
         } catch (err) {
-            console.error("Error loading user profile:", err);
+            console.error("Error loading user profile from Firestore:", err);
+            userProfile.name = user.displayName || "Anonymous Author";
+            userProfile.picture = user.photoURL || "";
         }
 
-        // Sync any existing local novels up to the cloud first
-        await syncLocalNovelsToCloud();
-    // Then load the cloud data into the app
-    const cloudNovels = await loadNovelsFromCloud();
-    if (cloudNovels) {
-      novels = cloudNovels;
-      localStorage.setItem('pocket_novels', JSON.stringify(novels));
-    }
-    if (typeof renderLibrary === 'function') renderLibrary();
-  } else {
-    console.log("No user signed in. Using local/default novels.");
-    if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign In';
-    const localNovels = JSON.parse(localStorage.getItem('pocket_novels'));
-    novels = (localNovels && localNovels.length > 0) ? localNovels : defaultSampleNovels;
-    if (typeof renderLibrary === 'function') renderLibrary();
-  }
-  updateProfileUI();
-});
+        // FORCE UI UPDATE: Immediately refresh UI elements
+        updateProfileUI();
 
+        // Load user cloud novels
+        await syncLocalNovelsToCloud();
+        const cloudNovels = await loadNovelsFromCloud();
+        if (cloudNovels) {
+            novels = cloudNovels;
+            localStorage.setItem('pocket_novels', JSON.stringify(novels));
+        }
+        if (typeof renderLibrary === 'function') renderLibrary();
+
+    } else {
+        if (authBtn) authBtn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> Sign In`;
+        userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
+        updateProfileUI();
+    }
+});
 // Toggle login/logout when the header button is clicked
 // Toggle login/logout or offer sign-in options when header button is clicked
 // Open the custom auth modal or sign out if already logged in
