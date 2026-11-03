@@ -174,14 +174,15 @@
 .auth-action-btn.secondary { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
 .auth-action-btn.secondary:hover { background: #30363d; }
 /* Modern Wattpad-style Compact Novel Grid */
-.novels-grid, .novel-list {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  padding: 12px;
+#novelGrid, #libraryGrid, .novels-grid, .novel-list {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 12px !important;
+  padding: 12px !important;
 }
 
-.novel-card {
+/* Force card sizes to stay compact */
+#novelGrid > div, #libraryGrid > div, .novel-card {
   background: #1e293b;
   border-radius: 12px;
   overflow: hidden;
@@ -190,27 +191,24 @@
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
 }
 
-.novel-card img {
-  width: 100%;
-  height: 140px; 
-  object-fit: cover;
+/* Make cover images small and compact */
+#novelGrid img, #libraryGrid img, .novel-card img {
+  width: 100% !important;
+  height: 140px !important;
+  object-fit: cover !important;
 }
 
-.novel-card-content {
-  padding: 8px;
-}
-
-.novel-card h3 {
-  font-size: 13px;
-  margin: 0 0 4px 0;
+/* Adjust card text padding */
+#novelGrid h3, #libraryGrid h3 {
+  font-size: 13px !important;
+  margin: 4px 0 !important;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-.novel-card p, .novel-card span {
-  font-size: 11px;
-  color: #94a3b8;
+        #novelGrid > div, #libraryGrid > div, .novel-card {
+  max-width: none !important;
+  width: 100% !important;
 }
     </style>
     <!-- Firebase SDK Compatibility Scripts -->
