@@ -655,13 +655,26 @@ firebase.auth().onAuthStateChanged(async (user) => {
   currentUser = user;
   const authBtn = document.getElementById('authBtn');
   
-  if (user) {
-    console.log("Logged in as:", user.email || user.displayName);
-    if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
-    
-    // Sync any existing local novels up to the cloud first
-    await syncLocalNovelsToCloud();
-    
+      if (user) {
+        console.log("Logged in as:", user.email || user.displayName);
+        if (authBtn) authBtn.innerHTML = `<i class="fa-solid fa-right-from-bracket"></i> Sign Out`;
+
+        // Fetch user profile from Firestore
+        try {
+            const userDoc = await db.collection("users").doc(user.uid).get();
+            if (userDoc.exists) {
+                const data = userDoc.data();
+                userProfile.name = data.name || user.displayName || "Author Name";
+                userProfile.bio = data.bio || "";
+                userProfile.picture = data.photoURL || data.picture || user.photoURL || "";
+                userProfile.facebookUrl = data.facebookUrl || "";
+            }
+        } catch (err) {
+            console.error("Error loading user profile:", err);
+        }
+
+        // Sync any existing local novels up to the cloud first
+        await syncLocalNovelsToCloud();
     // Then load the cloud data into the app
     const cloudNovels = await loadNovelsFromCloud();
     if (cloudNovels) {
