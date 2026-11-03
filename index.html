@@ -143,12 +143,19 @@
             <input type="text" id="searchInput" class="search-input" placeholder="Search novel, author, language..." onkeyup="applyFilters()">
         </div>
 
-        <div class="nav-links">
-            <div class="nav-item active" id="navExplore" onclick="switchView('exploreView', true)"><i class="fa-solid fa-compass"></i> <span>Explore</span></div>
-            <div class="nav-item" id="navLibrary" onclick="switchView('libraryView', true)"><i class="fa-solid fa-bookmark"></i> <span>Library</span></div>
-            <div class="nav-item" id="navStudio" onclick="switchView('studioView', true)"><i class="fa-solid fa-pen-nib"></i> <span>Publish</span></div>
-            <div class="user-badge" id="headerAvatar" onclick="switchView('profileView', true)" title="My Profile">ME</div>
-        </div>
+<div class="nav-links">
+  <div class="nav-item active" id="navExplore" onclick="switchView('exploreView', true)"><i class="fa-solid fa-compass"></i> <span>Explore</span></div>
+  <div class="nav-item" id="navLibrary" onclick="switchView('libraryView', true)"><i class="fa-solid fa-bookmark"></i> <span>Library</span></div>
+  <div class="nav-item" id="navStudio" onclick="switchView('studioView', true)"><i class="fa-solid fa-pen-nib"></i> <span>Publish</span></div>
+  
+  <!-- Sign In / Sign Out Button -->
+  <button id="authBtn" class="auth-btn" onclick="handleAuthClick()">
+    <i class="fa-brands fa-google"></i> Sign In
+  </button>
+  
+  <div class="user-badge" id="headerAvatar" onclick="switchView('profileView', true)" title="My Profile">ME</div>
+</div>
+
     </header>
 
     <main>
@@ -514,16 +521,30 @@ let currentUser = null;
 // Initialize Auth state listener
 firebase.auth().onAuthStateChanged((user) => {
   currentUser = user;
+  const authBtn = document.getElementById('authBtn');
+  
   if (user) {
     console.log("Logged in as:", user.email || user.displayName);
+    if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
     loadUserNovelsFromCloud(user.uid);
   } else {
     console.log("No user signed in. Using local/default novels.");
+    if (authBtn) authBtn.innerHTML = '<i class="fa-brands fa-google"></i> Sign In';
     const localNovels = JSON.parse(localStorage.getItem('pocket_novels'));
     novels = (localNovels && localNovels.length > 0) ? localNovels : defaultSampleNovels;
     if (typeof renderLibrary === 'function') renderLibrary();
   }
 });
+// Toggle login/logout when the header button is clicked
+function handleAuthClick() {
+  if (currentUser) {
+    if (confirm("Are you sure you want to sign out?")) {
+      signOutUser();
+    }
+  } else {
+    signInWithGoogle();
+  }
+}
 
 // Google Sign-In helper
 function signInWithGoogle() {
