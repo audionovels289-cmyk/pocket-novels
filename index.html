@@ -721,10 +721,28 @@ function handleEmailSignupSubmit() {
 
 // Google Sign-In helper
 function signInWithGoogle() {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  firebase.auth().signInWithPopup(provider)
-    .then(() => console.log("Google Sign-in success!"))
-    .catch((error) => console.error("Google Auth error:", error.message));
+    const provider = new firebase.auth.GoogleAuthProvider();
+    firebase.auth().signInWithPopup(provider)
+        .then((result) => {
+            const user = result.user;
+            
+            // Auto-populate Google Profile details
+            const userData = {
+                uid: user.uid,
+                name: user.displayName || "Anonymous Author",
+                email: user.email,
+                photoURL: user.photoURL || "",
+                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            // Save to Firestore users collection
+            return db.collection("users").doc(user.uid).set(userData, { merge: true });
+        })
+        .then(() => {
+            console.log("Profile synced with Google!");
+            closeAuthModal();
+        })
+        .catch((error) => console.error("Google Auth error:", error.message));
 }
 // Sign in with Email and Password
 function signInWithEmail(email, password) {
