@@ -509,7 +509,66 @@ initCloudData();
             if(readingProgress) localStorage.setItem('pocket_reading_progress', JSON.stringify(readingProgress));
                 saveNovelsToCloud(novels);
         }
+let currentUser = null;
 
+// Initialize Auth state listener
+firebase.auth().onAuthStateChanged((user) => {
+  currentUser = user;
+  if (user) {
+    console.log("Logged in as:", user.email || user.displayName);
+    loadUserNovelsFromCloud(user.uid);
+  } else {
+    console.log("No user signed in. Using local/default novels.");
+    const localNovels = JSON.parse(localStorage.getItem('pocket_novels'));
+    novels = (localNovels && localNovels.length > 0) ? localNovels : defaultSampleNovels;
+    if (typeof renderLibrary === 'function') renderLibrary();
+  }
+});
+
+// Google Sign-In helper
+function signInWithGoogle() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  firebase.auth().signInWithPopup(provider)
+    .then(() => console.log("Google Sign-in success!"))
+    .catch((error) => console.error("Google Auth error:", error.message));
+}
+
+// Sign Out helper
+function signOutUser() {
+  firebase.auth().signOut()
+    .then(() => console.log("User signed out!"))
+    .catch((error) => console.error("Sign-out error:", error.message));
+}
+
+// User-Specific Cloud Save
+async function saveNovelsToCloud(novelsData) {
+  if (!currentUser) return; // Only save to cloud if logged in
+  try {
+    await db.collection("users").doc(currentUser.uid).collection("appData").doc("userNovels").set({
+      novels: novelsData,
+      lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    console.log("User library saved to cloud!");
+  } catch (error) {
+    console.error("Error saving user library: ", error);
+  }
+}
+
+// User-Specific Cloud Load
+async function loadUserNovelsFromCloud(uid) {
+  try {
+    const doc = await db.collection("users").doc(uid).collection("appData").doc("userNovels").get();
+    if (doc.exists) {
+      novels = doc.data().novels;
+      localStorage.setItem('pocket_novels', JSON.stringify(novels));
+    } else {
+      saveNovelsToCloud(novels);
+    }
+    if (typeof renderLibrary === 'function') renderLibrary();
+  } catch (error) {
+    console.error("Error loading user library: ", error);
+  }
+}
         function updateProfileUI() {
             document.getElementById('profileNameDisplay').innerText = userProfile.name;
             document.getElementById('profileBioDisplay').innerText = userProfile.bio;
