@@ -525,8 +525,11 @@
             }
         ];
 
-        // Initialize novels from cloud or localStorage
-let novels = defaultSampleNovels;
+        // Initialize novels instantly from localStorage so they never flicker or vanish on load
+let savedNovels = localStorage.getItem('pocket_novels');
+let novels = (savedNovels && JSON.parse(savedNovels).length > 0) 
+  ? JSON.parse(savedNovels) 
+  : defaultSampleNovels;
 
 // Load data asynchronously on startup
 // Load data asynchronously on startup safely
