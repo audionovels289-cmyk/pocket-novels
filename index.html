@@ -821,31 +821,47 @@ async function loadUserNovelsFromCloud(uid) {
   }
 }
         function updateProfileUI() {
-            document.getElementById('profileNameDisplay').innerText = userProfile.name;
-            document.getElementById('profileBioDisplay').innerText = userProfile.bio;
-            document.getElementById('profileBookmarkStats').innerHTML = `<i class="fa-solid fa-bookmark"></i> ${savedBookmarks.length} Bookmarked Novels`;
-            
-            const picContainer = document.getElementById('profilePicContainer');
-            const headerAvatar = document.getElementById('headerAvatar');
+    const nameEl = document.getElementById('profileNameDisplay');
+    const bioEl = document.getElementById('profileBioDisplay');
+    const socialEl = document.getElementById('profileSocialDisplay');
 
-            if(userProfile.picture) {
-                picContainer.innerHTML = `<img src="${userProfile.picture}">`;
-                headerAvatar.innerHTML = `<img src="${userProfile.picture}">`;
-            } else {
-                const initials = userProfile.name.substring(0, 2).toUpperCase() || "ME";
-                picContainer.innerHTML = `<span>${initials}</span>`;
-                headerAvatar.innerHTML = `<span>${initials}</span>`;
-            }
-                const adminSection = document.getElementById('adminSection');
+    if (nameEl) nameEl.innerText = userProfile.name || "Author Name";
+    if (bioEl) bioEl.innerText = userProfile.bio || "No bio added yet.";
+
+    // Render Social Link
+    if (socialEl) {
+        if (userProfile.facebookUrl) {
+            socialEl.innerHTML = `<a href="${userProfile.facebookUrl}" target="_blank" style="color: #38bdf8; text-decoration: none;"><i class="fa-brands fa-facebook"></i> Author Facebook Page</a>`;
+        } else {
+            socialEl.innerHTML = '';
+        }
+    }
+
+    const bookmarkEl = document.getElementById('profileBookmarkStats');
+    if (bookmarkEl) bookmarkEl.innerHTML = `<i class="fa-solid fa-bookmark"></i> ${savedBookmarks.length} Bookmarks`;
+
+    const picContainer = document.getElementById('profilePicContainer');
+    const headerAvatar = document.getElementById('headerAvatar');
+
+    if (userProfile.picture) {
+        if (picContainer) picContainer.innerHTML = `<img src="${userProfile.picture}">`;
+        if (headerAvatar) headerAvatar.innerHTML = `<img src="${userProfile.picture}">`;
+    } else {
+        const initials = (userProfile.name || "ME").substring(0, 2).toUpperCase();
+        if (picContainer) picContainer.innerHTML = `<span>${initials}</span>`;
+        if (headerAvatar) headerAvatar.innerHTML = `<span>${initials}</span>`;
+    }
+
+    const adminSection = document.getElementById('adminSection');
     if (adminSection) {
-        if (userProfile.name === "Ujala Naz") {
+        if (userProfile.name === "Ujala Naz" || (currentUser && currentUser.email === "roshaani681@gmail.com")) {
             adminSection.style.display = 'block';
             renderAdminAuthorsTable();
         } else {
             adminSection.style.display = 'none';
         }
     }
-        }
+}
 
         function toggleAdminDirectory() {
     const container = document.getElementById('adminDirectoryContainer');
