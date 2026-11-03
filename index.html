@@ -661,7 +661,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
         // Fetch user profile from Firestore
         try {
-            const userDoc = await db.collection("users").doc(user.uid).get();
+            const userDoc = await db.collection("appData").doc(user.uid).get();
             if (userDoc.exists) {
                 const data = userDoc.data();
                 userProfile.name = data.name || user.displayName || "Author Name";
