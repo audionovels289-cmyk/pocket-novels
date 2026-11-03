@@ -757,7 +757,7 @@ function signInWithGoogle() {
             userProfile.email = user.email || "";
             userProfile.picture = user.photoURL || "";
 
-            // Auto-populate Google Profile details
+                        // Auto-populate Google Profile details
             const userData = {
                 uid: user.uid,
                 name: userProfile.name,
@@ -766,9 +766,8 @@ function signInWithGoogle() {
                 lastLogin: firebase.firestore.FieldValue.serverTimestamp()
             };
 
-            // 2. Save to Firestore users collection
-            return db.collection("users").doc(user.uid).set(userData, { merge: true });
-        })
+            // 2. Save to Firestore appData collection using merge so bio/facebookUrl stay safe
+            return db.collection("appData").doc("userProfile_" + user.uid).set(userData, { merge: true });
         .then(() => {
             console.log("Profile synced with Google!");
             
