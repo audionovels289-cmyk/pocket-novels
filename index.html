@@ -932,24 +932,41 @@ async function loadUserNovelsFromCloud(uid) {
             }
         }
 
-        function handleSaveProfile(e) {
-            e.preventDefault();
-            const oldName = userProfile.name;
-            userProfile.name = document.getElementById('editNameInput').value;
-            userProfile.bio = document.getElementById('editBioInput').value;
-            userProfile.facebookUrl = document.getElementById('editSocialInput').value.trim();
-            if(uploadedProfilePicUrl) userProfile.picture = uploadedProfilePicUrl;
+        async function handleSaveProfile(e) {
+    e.preventDefault();
+    const oldName = userProfile.name;
+    userProfile.name = document.getElementById('editNameInput').value;
+    userProfile.bio = document.getElementById('editBioInput').value;
+    userProfile.facebookUrl = document.getElementById('editSocialInput').value.trim();
+    if (uploadedProfilePicUrl) userProfile.picture = uploadedProfilePicUrl;
 
-            novels.forEach(n => {
-                if(n.author === oldName || n.author === "Author Name") n.author = userProfile.name;
-            });
+    novels.forEach(n => {
+        if (n.author === oldName || n.author === "Author Name") n.author = userProfile.name;
+    });
 
-            saveToStorage();
-            updateProfileUI();
-            toggleEditProfile();
-            alert("Profile updated successfully!");
-            renderProfileBooks();
+    saveToStorage();
+    updateProfileUI();
+    toggleEditProfile();
+
+    // --- SAVE TO FIRESTORE CLOUD ---
+    if (currentUser) {
+        try {
+            await db.collection("users").doc(currentUser.uid).set({
+                name: userProfile.name,
+                bio: userProfile.bio,
+                facebookUrl: userProfile.facebookUrl,
+                photoURL: userProfile.picture,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            console.log("Profile updated in Firestore!");
+        } catch (err) {
+            console.error("Error saving profile to Firestore:", err);
         }
+    }
+
+    alert("Profile updated successfully!");
+    renderProfileBooks();
+}
 
         function switchView(viewId, saveState = false) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
