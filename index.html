@@ -759,7 +759,7 @@ function signInWithGoogle() {
             };
 
             // 2. Save to Firestore users collection
-            return db.collection("users").doc(user.uid).set(userData, { merge: true });
+            return db.collection("appData").doc(user.uid).set(userData, { merge: true });
         })
         .then(() => {
             console.log("Profile synced with Google!");
