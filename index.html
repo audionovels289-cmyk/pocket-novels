@@ -536,11 +536,12 @@ async function initCloudData() {
         localStorage.setItem('pocket_novels', JSON.stringify(novels));
     } else {
         const localNovels = JSON.parse(localStorage.getItem('pocket_novels'));
-        if (localNovels && localNovels.length > 0) {
-            novels = localNovels;
-        } else {
-            localStorage.setItem('pocket_novels', JSON.stringify(novels));
-        }
+if (localNovels && localNovels.length > 0) {
+    novels = localNovels;
+} else if (typeof defaultSampleNovels !== 'undefined' && defaultSampleNovels.length > 0) {
+    novels = defaultSampleNovels;
+    localStorage.setItem('pocket_novels', JSON.stringify(novels));
+}
     }
     // Refresh library view after cloud data arrives
     if (typeof renderLibrary === 'function') renderLibrary();
@@ -567,14 +568,19 @@ initCloudData();
         let currentFontSize = 18;
 
         function saveToStorage() {
-            localStorage.setItem('pocket_novels', JSON.stringify(novels));
-            localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks));
-            localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
-            authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture };
-            localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
-            if(readingProgress) localStorage.setItem('pocket_reading_progress', JSON.stringify(readingProgress));
-                saveNovelsToCloud(novels);
-        }
+  if (novels && novels.length > 0) {
+    localStorage.setItem('pocket_novels', JSON.stringify(novels));
+  }
+  localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks));
+  authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture };
+  localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
+  if (readingProgress) localStorage.setItem('pocket_reading_progress', JSON.stringify(readingProgress));
+  
+  if (currentUser) {
+    saveNovelsToCloud(novels);
+  }
+}
+
 let currentUser = null;
 
 // Initialize Auth state listener
