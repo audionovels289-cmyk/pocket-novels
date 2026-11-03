@@ -942,12 +942,16 @@ async function loadUserNovelsFromCloud(uid) {
 
         async function handleSaveProfile(e) {
     e.preventDefault();
+
+    // --- DEBUG LOGS TO TEST INPUTS ---
+    console.log("Saving Bio Input:", document.getElementById('editBioInput').value);
+    console.log("Saving FB Input:", document.getElementById('editSocialInput').value);
+
     const oldName = userProfile.name;
     userProfile.name = document.getElementById('editNameInput').value;
     userProfile.bio = document.getElementById('editBioInput').value;
     userProfile.facebookUrl = document.getElementById('editSocialInput').value.trim();
     if (uploadedProfilePicUrl) userProfile.picture = uploadedProfilePicUrl;
-
     novels.forEach(n => {
         if (n.author === oldName || n.author === "Author Name") n.author = userProfile.name;
     });
