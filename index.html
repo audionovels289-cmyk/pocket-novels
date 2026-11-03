@@ -529,22 +529,24 @@
 let novels = defaultSampleNovels;
 
 // Load data asynchronously on startup
+// Load data asynchronously on startup safely
 async function initCloudData() {
-    const cloudNovels = await loadNovelsFromCloud();
-    if (cloudNovels && cloudNovels.length > 0) {
-        novels = cloudNovels;
-        localStorage.setItem('pocket_novels', JSON.stringify(novels));
-    } else {
-        const localNovels = JSON.parse(localStorage.getItem('pocket_novels'));
-if (localNovels && localNovels.length > 0) {
-    novels = localNovels;
-} else if (typeof defaultSampleNovels !== 'undefined' && defaultSampleNovels.length > 0) {
-    novels = defaultSampleNovels;
+  const cloudNovels = await loadNovelsFromCloud();
+  if (cloudNovels && Array.isArray(cloudNovels) && cloudNovels.length > 0) {
+    novels = cloudNovels;
     localStorage.setItem('pocket_novels', JSON.stringify(novels));
-}
+  } else {
+    // Fallback to local storage if cloud is empty
+    const localNovels = JSON.parse(localStorage.getItem('pocket_novels'));
+    if (localNovels && localNovels.length > 0) {
+      novels = localNovels;
+    } else if (typeof defaultSampleNovels !== 'undefined' && defaultSampleNovels.length > 0) {
+      novels = defaultSampleNovels;
+      localStorage.setItem('pocket_novels', JSON.stringify(novels));
     }
-    // Refresh library view after cloud data arrives
-    if (typeof renderLibrary === 'function') renderLibrary();
+  }
+  // Refresh library view after data arrives
+  if (typeof renderLibrary === 'function') renderLibrary();
 }
 
 // Run the cloud sync on startup
