@@ -1176,6 +1176,28 @@ async function loadNovelsFromCloud() {
     console.error("Error loading from Firestore: ", error);
     return null;
   }
+    // Automatically sync local storage novels to cloud when logging in
+async function syncLocalNovelsToCloud() {
+  if (!currentUser) return;
+  
+  const localData = localStorage.getItem('pocket_novels');
+  if (localData) {
+    try {
+      const parsedNovels = JSON.parse(localData);
+      if (Array.isArray(parsedNovels) && parsedNovels.length > 0) {
+        // Save local novels to user's Firestore document
+        await db.collection("appData").doc(currentUser.uid).set({
+          novels: parsedNovels,
+          lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log("Local novels successfully synced to cloud!");
+      }
+    } catch (error) {
+      console.error("Error syncing local novels to cloud:", error);
+    }
+  }
+}
+
 }
     </script>
     <!-- Professional Auth Modal Overlay -->
