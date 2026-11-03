@@ -743,21 +743,29 @@ function signInWithGoogle() {
     firebase.auth().signInWithPopup(provider)
         .then((result) => {
             const user = result.user;
-            
+
+            // 1. Update local memory state immediately
+            userProfile.name = user.displayName || "Anonymous Author";
+            userProfile.email = user.email || "";
+            userProfile.picture = user.photoURL || "";
+
             // Auto-populate Google Profile details
             const userData = {
                 uid: user.uid,
-                name: user.displayName || "Anonymous Author",
+                name: userProfile.name,
                 email: user.email,
-                photoURL: user.photoURL || "",
+                photoURL: userProfile.picture,
                 lastLogin: firebase.firestore.FieldValue.serverTimestamp()
             };
 
-            // Save to Firestore users collection
+            // 2. Save to Firestore users collection
             return db.collection("users").doc(user.uid).set(userData, { merge: true });
         })
         .then(() => {
             console.log("Profile synced with Google!");
+            
+            // 3. Refresh UI and close modal
+            updateProfileUI();
             closeAuthModal();
         })
         .catch((error) => console.error("Google Auth error:", error.message));
