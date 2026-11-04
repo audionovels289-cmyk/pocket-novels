@@ -956,21 +956,13 @@ async function loadUserNovelsFromCloud(uid) {
     updateProfileUI();
     toggleEditProfile();
 
-    // --- SAVE TO FIRESTORE CLOUD ---
-    if (currentUser) {
-        try {
-            await db.collection("users").doc(currentUser.uid).set({
-                name: userProfile.name,
-                bio: userProfile.bio,
-                facebookUrl: userProfile.facebookUrl,
-                photoURL: userProfile.picture,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
-            console.log("Profile updated in Firestore!");
-        } catch (err) {
-            console.error("Error saving profile to Firestore:", err);
-        }
-    }
+            // --- SAVE TO FIRESTORE CLOUD ---
+    await saveUserProfileToCloud({
+        name: userProfile.name,
+        bio: userProfile.bio,
+        facebookUrl: userProfile.facebookUrl,
+        picture: userProfile.picture
+    });
 
     alert("Profile updated successfully!");
     renderProfileBooks();
