@@ -657,17 +657,16 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
     if (user) {
         console.log("Logged in as:", user.email || user.displayName);
-        if (authBtn) authBtn.innerHTML = `<i class="fa-solid fa-right-from-bracket"></i> Sign Out`;
+        if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
 
         try {
-            // Fetch saved profile from Firestore
-            const userDoc = await db.collection("users").doc(user.uid).get();
-            if (userDoc.exists) {
-                const data = userDoc.data();
+            // Fetch saved profile from Firestore using our secure subcollection function
+            const data = await loadUserProfileFromCloud();
+            if (data) {
                 userProfile.name = data.name || user.displayName || "Anonymous Author";
-                userProfile.email = data.email || user.email || "";
+                userProfile.email = user.email || "";
                 userProfile.bio = data.bio || "";
-                userProfile.picture = data.photoURL || data.picture || user.photoURL || "";
+                userProfile.picture = data.picture || user.photoURL || "";
                 userProfile.facebookUrl = data.facebookUrl || "";
             } else {
                 userProfile.name = user.displayName || "Anonymous Author";
@@ -695,11 +694,12 @@ firebase.auth().onAuthStateChanged(async (user) => {
         if (typeof renderLibrary === 'function') renderLibrary();
 
     } else {
-        if (authBtn) authBtn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> Sign In`;
+        if (authBtn) authBtn.innerHTML = `<i class="fa-solid fa-right-from-bracket"></i> Sign In`;
         userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
         updateProfileUI();
     }
 });
+
 // Toggle login/logout when the header button is clicked
 // Toggle login/logout or offer sign-in options when header button is clicked
 // Open the custom auth modal or sign out if already logged in
