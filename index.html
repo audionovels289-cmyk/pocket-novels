@@ -650,7 +650,6 @@ initCloudData();
 let currentUser = null;
 
 // Initialize Auth state listener
-// Initialize Auth state listener
 firebase.auth().onAuthStateChanged(async (user) => {
     currentUser = user;
     const authBtn = document.getElementById('authBtn');
