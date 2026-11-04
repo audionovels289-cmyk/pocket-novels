@@ -1342,6 +1342,33 @@ async function loadNovelsFromCloud() {
     console.error("Error loading from Firestore: ", error);
     return null;
   }
+    async function saveUserProfileToCloud(profileData) {
+  try {
+    if (!currentUser) return;
+    await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").set({
+      bio: profileData.bio || "",
+      facebookUrl: profileData.facebookUrl || "",
+      lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    console.log("Profile successfully saved to cloud!");
+  } catch (error) {
+    console.error("Error saving profile to cloud:", error);
+  }
+}
+
+async function loadUserProfileFromCloud() {
+  try {
+    if (!currentUser) return null;
+    const doc = await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").get();
+    if (doc.exists) {
+      return doc.data();
+    }
+    return null;
+  } catch (error) {
+    console.error("Error loading profile from cloud:", error);
+    return null;
+  }
+}
     // Automatically sync local storage novels to cloud when logging in
 async function syncLocalNovelsToCloud() {
   if (!currentUser) return;
