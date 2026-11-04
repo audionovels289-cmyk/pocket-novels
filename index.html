@@ -661,7 +661,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
         try {
             // Fetch saved profile from Firestore
-            const userDoc = await db.collection("appData").doc("userProfile_" + user.uid).get();
+            const userDoc = await db.collection("users").doc(user.uid).get();
             if (userDoc.exists) {
                 const data = userDoc.data();
                 userProfile.name = data.name || user.displayName || "Anonymous Author";
@@ -757,7 +757,7 @@ function signInWithGoogle() {
             userProfile.email = user.email || "";
             userProfile.picture = user.photoURL || "";
 
-                        // Auto-populate Google Profile details
+            // Auto-populate Google Profile details
             const userData = {
                 uid: user.uid,
                 name: userProfile.name,
@@ -766,8 +766,9 @@ function signInWithGoogle() {
                 lastLogin: firebase.firestore.FieldValue.serverTimestamp()
             };
 
-            // 2. Save to Firestore appData collection using merge so bio/facebookUrl stay safe
-            return db.collection("appData").doc("userProfile_" + user.uid).set(userData, { merge: true });
+            // 2. Save to Firestore users collection
+            return db.collection("users").doc(user.uid).set(userData, { merge: true });
+        })
         .then(() => {
             console.log("Profile synced with Google!");
             
@@ -941,16 +942,12 @@ async function loadUserNovelsFromCloud(uid) {
 
         async function handleSaveProfile(e) {
     e.preventDefault();
-
-    // --- DEBUG LOGS TO TEST INPUTS ---
-    console.log("Saving Bio Input:", document.getElementById('editBioInput').value);
-    console.log("Saving FB Input:", document.getElementById('editSocialInput').value);
-
     const oldName = userProfile.name;
     userProfile.name = document.getElementById('editNameInput').value;
     userProfile.bio = document.getElementById('editBioInput').value;
     userProfile.facebookUrl = document.getElementById('editSocialInput').value.trim();
     if (uploadedProfilePicUrl) userProfile.picture = uploadedProfilePicUrl;
+
     novels.forEach(n => {
         if (n.author === oldName || n.author === "Author Name") n.author = userProfile.name;
     });
@@ -959,19 +956,19 @@ async function loadUserNovelsFromCloud(uid) {
     updateProfileUI();
     toggleEditProfile();
 
-    // --- SAVE TO FIRESTORE CLOUD (appData) ---
+    // --- SAVE TO FIRESTORE CLOUD ---
     if (currentUser) {
         try {
-            await db.collection("appData").doc("userProfile_" + currentUser.uid).set({
+            await db.collection("users").doc(currentUser.uid).set({
                 name: userProfile.name,
                 bio: userProfile.bio,
                 facebookUrl: userProfile.facebookUrl,
                 photoURL: userProfile.picture,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
-            console.log("Profile updated in appData!");
+            console.log("Profile updated in Firestore!");
         } catch (err) {
-            console.error("Error saving profile to appData:", err);
+            console.error("Error saving profile to Firestore:", err);
         }
     }
 
@@ -1407,6 +1404,1414 @@ async function syncLocalNovelsToCloud() {
     });
   }
 </script>
-    
+
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pocket Novels - Read & Write Stories</title>
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --secondary: #ec4899;
+            --bg-body: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --gradient-primary: linear-gradient(135deg, #6366f1 0%, #ec4899 100%);
+            --radius-md: 14px;
+            --radius-lg: 20px;
+            --reader-bg: #121212;
+            --reader-text: #e0e0e0;
+            --reader-font-size: 18px;
+        }
+
+        body.theme-light { --reader-bg: #f8fafc; --reader-text: #1e293b; }
+        body.theme-sepia { --reader-bg: #fbf0d9; --reader-text: #5f4b32; }
+        body.theme-dark { --reader-bg: #18181b; --reader-text: #d4d4d8; }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background-color: var(--bg-body); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
+
+        header {
+            position: sticky; top: 0; z-index: 100; background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(16px); border-bottom: 1px solid var(--border-color);
+            padding: 0.8rem 1.5rem; display: flex; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; gap: 1rem;
+        }
+
+        .logo { display: flex; align-items: center; gap: 10px; font-size: 1.3rem; font-weight: 800; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; cursor: pointer; }
+        .logo i { font-size: 1.5rem; color: var(--primary-light); -webkit-text-fill-color: initial; }
+
+        .search-container { position: relative; flex: 1; max-width: 300px; min-width: 200px; }
+        .search-input { width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); padding: 8px 14px 8px 36px; border-radius: 20px; color: #fff; font-size: 0.85rem; outline: none; }
+        .search-input:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(99, 102, 241, 0.3); }
+        .search-container i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.85rem; }
+
+        .nav-links { display: flex; align-items: center; gap: 1rem; }
+        .nav-item { color: var(--text-muted); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+        .nav-item.active { color: var(--primary-light); background: rgba(255, 255, 255, 0.05); }
+
+        .user-badge { width: 38px; height: 38px; border-radius: 50%; background: var(--gradient-primary); display: flex; align-items: center; justify-content: center; font-weight: 700; cursor: pointer; overflow: hidden; flex-shrink: 0; }
+        .user-badge img { width: 100%; height: 100%; object-fit: cover; }
+
+        main { flex: 1; padding: 1.5rem; max-width: 1200px; margin: 0 auto; width: 100%; }
+        .view-section { display: none; }
+        .view-section.active { display: block; }
+
+        .continue-banner { background: var(--gradient-primary); border-radius: var(--radius-md); padding: 1.2rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); }
+        
+        .genre-filters { display: flex; gap: 8px; overflow-x: auto; padding: 0.5rem 0 1.2rem 0; white-space: nowrap; scrollbar-width: none; }
+        .genre-filters::-webkit-scrollbar { display: none; }
+        .genre-tab { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-muted); padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; flex-shrink: 0; }
+        .genre-tab.active { background: var(--gradient-primary); color: #fff; border-color: transparent; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
+
+        .novel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1.5rem; margin-top: 0.5rem; }
+        .novel-card { background: var(--bg-card); border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-color); cursor: pointer; display: flex; flex-direction: column; position: relative; }
+        .novel-cover { width: 100%; height: 220px; object-fit: cover; background: #334155; }
+        
+        .genre-badge { position: absolute; top: 10px; right: 10px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(6px); color: var(--primary-light); border: 1px solid rgba(255, 255, 255, 0.1); padding: 3px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; }
+        .lang-badge { position: absolute; top: 10px; left: 10px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(6px); color: var(--secondary); border: 1px solid rgba(255, 255, 255, 0.1); padding: 3px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; }
+
+        .novel-info { padding: 0.9rem; flex: 1; }
+        .novel-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
+        .novel-author { font-size: 0.75rem; color: var(--primary-light); cursor: pointer; text-decoration: underline; display: inline-block; margin-bottom: 4px; }
+        .novel-author:hover { color: var(--secondary); }
+        .novel-stats { font-size: 0.7rem; color: var(--text-muted); display: flex; gap: 8px; align-items: center; }
+
+        .btn { background: var(--gradient-primary); color: #fff; border: none; padding: 10px 22px; border-radius: 20px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-secondary { background: var(--bg-card-hover); color: var(--text-main); }
+        .btn-success { background: #10b981; color: #fff; }
+        .btn-danger { background: #ef4444; color: #fff; }
+
+        .studio-card { background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border-color); padding: 2rem; max-width: 800px; margin: 0 auto; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem; }
+        .form-control { width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; color: #fff; }
+
+        .file-upload-wrapper { border: 2px dashed var(--primary); padding: 1.5rem; text-align: center; border-radius: 12px; background: rgba(99, 102, 241, 0.05); cursor: pointer; margin-top: 6px; }
+        .file-upload-wrapper input[type="file"] { display: none; }
+        .preview-img { max-height: 180px; border-radius: 8px; margin-top: 10px; display: none; }
+
+        .profile-card { background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border-color); padding: 2rem; margin-bottom: 2rem; display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; }
+        .profile-pic { width: 90px; height: 90px; border-radius: 50%; background: var(--gradient-primary); display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 800; overflow: hidden; flex-shrink: 0; }
+        .profile-pic img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-details { flex: 1; min-width: 200px; }
+        .profile-name { font-size: 1.5rem; font-weight: 800; margin-bottom: 4px; }
+        .profile-bio { color: var(--text-muted); font-size: 0.9rem; line-height: 1.4; margin-bottom: 10px; }
+
+        .admin-table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: var(--bg-card); border-radius: 8px; overflow: hidden; }
+        .admin-table th, .admin-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; }
+        .admin-table th { background: rgba(99, 102, 241, 0.2); color: var(--primary-light); font-weight: 700; }
+
+        .reader-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--reader-bg); color: var(--reader-text); z-index: 1000; display: none; flex-direction: column; }
+        .reader-container.active { display: flex; }
+        .reader-header, .reader-footer { padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .reader-content { flex: 1; overflow-y: auto; padding: 3rem 1.5rem; max-width: 750px; margin: 0 auto; width: 100%; font-family: 'Lora', serif; font-size: var(--reader-font-size); line-height: 1.8; }
+        
+        .reader-controls { display: flex; gap: 10px; align-items: center; }
+        .theme-dot { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid #fff; }
+        .auth-btn {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #e6edf3;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+}
+.auth-btn:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+        .auth-modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; z-index: 9999;
+}
+.auth-modal-content {
+  background: #161b22; border: 1px solid rgba(255, 255, 255, 0.15);
+  width: 90%; max-width: 380px; border-radius: 12px; padding: 24px;
+  color: #e6edf3; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+.auth-modal-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+}
+.auth-modal-header h3 { font-size: 1.1rem; margin: 0; font-weight: 600; color: #e6edf3; }
+.auth-close-btn { font-size: 1.5rem; cursor: pointer; color: #8b949e; }
+.auth-close-btn:hover { color: #fff; }
+.google-signin-btn {
+  width: 100%; background: #ffffff; color: #24292e; border: none;
+  padding: 10px; border-radius: 6px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-bottom: 10px; font-size: 0.9rem; transition: background 0.2s;
+}
+.google-signin-btn:hover { background: #f0f0f0; }
+.auth-divider {
+  text-align: center; border-bottom: 1px solid #30363d; line-height: 0.1em;
+  margin: 20px 0; color: #8b949e; font-size: 0.75rem;
+}
+.auth-divider span { background: #161b22; padding: 0 10px; }
+.auth-input {
+  width: 100%; box-sizing: border-box; padding: 10px 12px; margin-bottom: 12px; background: #0d1117;
+  border: 1px solid #30363d; border-radius: 6px; color: #e6edf3; font-size: 0.9rem;
+}
+.auth-input:focus { border-color: #58a6ff; outline: none; }
+.auth-buttons-row { display: flex; gap: 10px; margin-top: 10px; }
+.auth-action-btn {
+  flex: 1; padding: 10px; border-radius: 6px; font-weight: 600; cursor: pointer; border: none; font-size: 0.9rem;
+}
+.auth-action-btn.primary { background: #238636; color: #fff; }
+.auth-action-btn.primary:hover { background: #2ea043; }
+.auth-action-btn.secondary { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
+.auth-action-btn.secondary:hover { background: #30363d; }
+/* Modern Wattpad-style Compact Novel Grid */
+#novelGrid, #libraryGrid, .novels-grid, .novel-list {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 12px !important;
+  padding: 12px !important;
+}
+
+/* Force card sizes to stay compact */
+#novelGrid > div, #libraryGrid > div, .novel-card {
+  background: #1e293b;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Make cover images small and compact */
+#novelGrid img, #libraryGrid img, .novel-card img {
+  width: 100% !important;
+  height: 140px !important;
+  object-fit: cover !important;
+}
+
+/* Adjust card text padding */
+#novelGrid h3, #libraryGrid h3 {
+  font-size: 13px !important;
+  margin: 4px 0 !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+        #novelGrid > div, #libraryGrid > div, .novel-card {
+  max-width: none !important;
+  width: 100% !important;
+}
+        /* Fix header overflow and prevent horizontal page sliding */
+body, html {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+}
+
+header {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-x: auto !important;
+  scrollbar-width: none; /* Hide scrollbar for clean look */
+}
+
+header::-webkit-scrollbar {
+  display: none;
+}
+    </style>
+    <!-- Firebase SDK Compatibility Scripts -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDtlWzh0-qEfPzmT7dia5F4mnJ_oKsj5wA",
+    authDomain: "pocket-novels-ec014.firebaseapp.com",
+    projectId: "pocket-novels-ec014",
+    storageBucket: "pocket-novels-ec014.firebasestorage.app",
+    messagingSenderId: "136400612026",
+    appId: "1:136400612026:web:cc5873486f06a5a1533083"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
+</head>
+<body>
+
+    <header>
+        <div class="logo" onclick="switchView('exploreView', true)">
+            <i class="fa-solid fa-book-bookmark"></i>
+            <span>Pocket Novels</span>
+        </div>
+
+        <div class="search-container">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchInput" class="search-input" placeholder="Search novel, author, language..." onkeyup="applyFilters()">
+        </div>
+
+<div class="nav-links">
+  <div class="nav-item active" id="navExplore" onclick="switchView('exploreView', true)"><i class="fa-solid fa-compass"></i> <span>Explore</span></div>
+  <div class="nav-item" id="navLibrary" onclick="switchView('libraryView', true)"><i class="fa-solid fa-bookmark"></i> <span>Library</span></div>
+  <div class="nav-item" id="navStudio" onclick="switchView('studioView', true)"><i class="fa-solid fa-pen-nib"></i> <span>Publish</span></div>
+  
+  <!-- Sign In / Sign Out Button -->
+  <button id="authBtn" class="auth-btn" onclick="handleAuthClick()">
+    <i class="fa-brands fa-google"></i> Sign In
+  </button>
+  
+  <div class="user-badge" id="headerAvatar" onclick="switchView('profileView', true)" title="My Profile">ME</div>
+</div>
+
+    </header>
+
+    <main>
+        <!-- EXPLORE VIEW -->
+        <section id="exploreView" class="view-section active">
+            <div id="continueReadingContainer"></div>
+
+            <h2>Published Novels</h2>
+            <div class="genre-filters">
+                <button class="genre-tab active" onclick="filterByGenre('All', this)">All</button>
+                <button class="genre-tab" onclick="filterByGenre('Fantasy', this)">Fantasy</button>
+                <button class="genre-tab" onclick="filterByGenre('Romance', this)">Romance</button>
+                <button class="genre-tab" onclick="filterByGenre('Action', this)">Action</button>
+                <button class="genre-tab" onclick="filterByGenre('Sci-Fi', this)">Sci-Fi</button>
+                <button class="genre-tab" onclick="filterByGenre('Mystery', this)">Mystery</button>
+            </div>
+            <div class="novel-grid" id="novelGrid"></div>
+        </section>
+
+        <!-- NOVEL DETAIL VIEW -->
+        <section id="detailView" class="view-section">
+            <button class="btn btn-secondary" onclick="switchView('exploreView', true)" style="margin-bottom: 1.5rem;"><i class="fa-solid fa-arrow-left"></i> Back</button>
+            <div id="detailContainer"></div>
+        </section>
+
+        <!-- LIBRARY VIEW -->
+        <section id="libraryView" class="view-section">
+            <h2>Your Bookmarks</h2>
+            <div class="novel-grid" id="libraryGrid"></div>
+        </section>
+
+        <!-- PUBLISH VIEW -->
+        <section id="studioView" class="view-section">
+            <div class="studio-card">
+                <h2><i class="fa-solid fa-pen-fancy"></i> Writer's Studio</h2>
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Create and publish a new novel directly to your app.</p>
+                <form id="publishForm" onsubmit="handlePublishNovel(event)">
+                    <div class="form-group">
+                        <label>Novel Title</label>
+                        <input type="text" id="pubTitle" class="form-control" placeholder="Enter book title" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Genre</label>
+                        <select id="pubGenre" class="form-control">
+                            <option>Fantasy</option><option>Romance</option><option>Action</option><option>Sci-Fi</option><option>Mystery</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Language</label>
+                        <select id="pubLanguage" class="form-control">
+                            <option>English</option><option>Urdu</option><option>Hindi</option><option>Korean</option><option>Chinese</option><option>Arabic</option><option>Spanish</option><option>Japanese</option><option>French</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+    <label>Text Alignment / Direction</label>
+    <select id="pubAlignment" class="form-control">
+        <option value="ltr">Left-to-Right (English / Standard)</option>
+        <option value="rtl">Right-to-Left (Urdu / Arabic)</option>
+    </select>
+</div>
+                    <div class="form-group">
+                        <label>Book Cover Image</label>
+                        <div class="file-upload-wrapper" onclick="document.getElementById('pubCoverFile').click()">
+                            <i class="fa-solid fa-image" style="font-size: 2rem; color: var(--primary-light);"></i>
+                            <p style="margin-top: 8px;">Tap here to select image</p>
+                            <input type="file" id="pubCoverFile" accept="image/*" onchange="previewGalleryImage(event)" required>
+                            <img id="coverPreview" class="preview-img" alt="Cover Preview">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Synopsis / Summary</label>
+                        <textarea id="pubSynopsis" class="form-control" style="min-height: 100px;" placeholder="Write a short book summary..." required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Chapter 1 Title</label>
+                        <input type="text" id="pubEpTitle" class="form-control" placeholder="Chapter 1: The Beginning" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Chapter 1 Content</label>
+                        <textarea id="pubEpContent" class="form-control" style="min-height: 180px;" placeholder="Write your chapter text here..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn"><i class="fa-solid fa-cloud-arrow-up"></i> Publish Now</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- MY PROFILE VIEW -->
+        <section id="profileView" class="view-section">
+            <div class="profile-card">
+                <div class="profile-pic" id="profilePicContainer"><span>ME</span></div>
+                <div class="profile-details">
+                    <div class="profile-name" id="profileNameDisplay">Author Name</div>
+                    <div class="profile-bio" id="profileBioDisplay">No bio added yet.</div>
+                    <div class="profile-social" id="profileSocialDisplay" style="margin-top: 6px;"></div>
+                    <p style="color: var(--primary-light); font-size: 0.85rem; margin-bottom: 10px;" id="profileBookmarkStats"><i class="fa-solid fa-bookmark"></i> 0 Bookmarked Novels</p>
+                    <button class="btn btn-secondary" onclick="toggleEditProfile()"><i class="fa-solid fa-user-pen"></i> Edit Profile</button>
+                </div>
+            </div>
+
+            <!-- ADMIN AUTHORS DIRECTORY PANEL (Hidden by default for all users) -->
+<div id="adminSection" style="display: none; margin-bottom: 2rem;">
+    <button class="btn btn-secondary" onclick="toggleAdminDirectory()" style="margin-bottom: 1rem; width: 100%; border: 1px dashed var(--primary-light);">
+        <i class="fa-solid fa-user-shield"></i> Admin: Toggle Authors Directory
+    </button>
+
+    <div id="adminDirectoryContainer" style="display: none; margin-bottom: 2rem;">
+        <div class="studio-card">
+            <h3><i class="fa-solid fa-user-shield"></i> Admin: Registered Authors Directory</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 10px;">Track active authors, their bios, and stories.</p>
+            <div style="overflow-x: auto;">
+                <table class="admin-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="text-align: left; border-bottom: 1px solid var(--border-color);">
+                            <th style="padding: 8px;">Author Name</th>
+                            <th style="padding: 8px;">Bio</th>
+                            <th style="padding: 8px;">Published Stories</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminAuthorsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+            <!-- EDIT PROFILE CARD -->
+            <div class="studio-card" id="editProfileCard" style="display: none; margin-bottom: 2rem;">
+                <h3>Edit Author Profile</h3>
+                <form onsubmit="handleSaveProfile(event)" style="margin-top: 1rem;">
+                    <div class="form-group">
+                        <label>Author / Pen Name</label>
+                        <input type="text" id="editNameInput" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Author Bio</label>
+                        <textarea id="editBioInput" class="form-control" style="min-height: 80px;"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Profile Picture</label>
+                        <div class="file-upload-wrapper" onclick="document.getElementById('editPicFile').click()">
+                            <i class="fa-solid fa-camera" style="font-size: 1.5rem; color: var(--primary-light);"></i>
+                            <p style="margin-top: 6px;">Tap to select Profile Picture</p>
+                            <input type="file" id="editPicFile" accept="image/*" onchange="previewProfilePic(event)">
+                            <img id="profilePicPreview" class="preview-img" alt="Profile Pic Preview">
+                        </div>
+                        <div class="form-group" style="margin-top: 10px;">
+    <label for="editSocialInput">Facebook / Social Link</label>
+    <input type="url" id="editSocialInput" class="form-control" placeholder="https://facebook.com/yourprofile">
+</div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" class="btn"><i class="fa-solid fa-check"></i> Save Profile</button>
+                        <button type="button" class="btn btn-secondary" onclick="toggleEditProfile()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <h3>My Published Stories</h3>
+            <div class="novel-grid" id="myPublishedGrid"></div>
+        </section>
+
+        <!-- PUBLIC AUTHOR PROFILE VIEW -->
+        <section id="authorPublicView" class="view-section">
+            <button class="btn btn-secondary" onclick="switchView('exploreView', true)" style="margin-bottom: 1.5rem;"><i class="fa-solid fa-arrow-left"></i> Back</button>
+            <div class="profile-card">
+                <div class="profile-pic" id="publicAuthorPic"><span id="publicAuthorInitials">AU</span></div>
+                <div class="profile-details">
+                    <div class="profile-name" id="publicAuthorName">Author Name</div>
+                    <div class="profile-bio" id="publicAuthorBio">Bio goes here.</div>
+                </div>
+            </div>
+            <h3>Books by this Author</h3>
+            <div class="novel-grid" id="publicAuthorBooksGrid"></div>
+        </section>
+    </main>
+
+    <!-- ADD CHAPTER MODAL -->
+    <div class="reader-container" id="addChapterModal" style="background: rgba(15, 23, 42, 0.95); justify-content: center; align-items: center;">
+        <div class="studio-card" style="width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;">
+            <h3><i class="fa-solid fa-folder-plus"></i> Add New Chapter</h3>
+            <form onsubmit="handleSaveNewChapter(event)" style="margin-top: 1rem;">
+                <div class="form-group">
+                    <label>Chapter Title</label>
+                    <input type="text" id="newChapTitle" class="form-control" placeholder="Chapter 2: The Journey" required>
+                </div>
+                <div class="form-group">
+                    <label>Chapter Content</label>
+                    <textarea id="newChapContent" class="form-control" style="min-height: 200px;" placeholder="Write chapter text here..." required></textarea>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn"><i class="fa-solid fa-plus"></i> Publish Chapter</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeAddChapterModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- READER MODAL -->
+    <div class="reader-container" id="readerModal">
+        <div class="reader-header">
+            <button class="btn btn-secondary" onclick="closeReader()"><i class="fa-solid fa-xmark"></i></button>
+            <div id="readerHeaderTitle" style="font-weight: 700;">Chapter 1</div>
+            <div class="reader-controls">
+                <div class="theme-dot" style="background: #18181b;" onclick="setReaderTheme('dark')" title="Dark Theme"></div>
+                <div class="theme-dot" style="background: #fbf0d9;" onclick="setReaderTheme('sepia')" title="Sepia Theme"></div>
+                <div class="theme-dot" style="background: #f8fafc;" onclick="setReaderTheme('light')" title="Light Theme"></div>
+                <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="changeFontSize(2)">A+</button>
+                <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="changeFontSize(-2)">A-</button>
+            </div>
+        </div>
+        <div class="reader-content" id="readerText"></div>
+        <div class="reader-footer">
+            <button class="btn btn-secondary" onclick="prevChapter()"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+            <span id="chapterIndicator" style="color: var(--text-muted);">Chapter 1</span>
+            <button class="btn" onclick="nextChapter()">Next <i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+    </div>
+
+    <script>
+                        // Pre-loaded starter novels with LocalStorage persistence support
+        const defaultSampleNovels = [
+            {
+                id: 1700000001001,
+                title: "The Mystery of the Clockwork Manor",
+                author: "Arthur Vance",
+                genre: "Mystery",
+                language: "English",
+                cover: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=500&q=80",
+                synopsis: "A thrilling detective story set in a foggy Victorian estate where every clock hides a secret.",
+                views: 142,
+                comments: [
+                    { author: "ReaderOne", text: "Great mystery! The dark theme looks wonderful.", date: "2026-06-06" }
+                ],
+                chapters: [
+                    {
+                        number: 1,
+                        title: "Chapter 1: The Midnight Chime",
+                        content: "The heavy fog rolled over the cobblestone courtyard of Manor Blackwood. Inspector Vance adjusted his coat collar against the damp chill. Inside, the grandfather clock had just struck midnight—twelve slow, deliberate notes that seemed to echo through the empty halls.\n\nHe pushed open the heavy oak door. The room was dark, illuminated only by the faint glow of embers in the hearth. Something was terribly wrong."
+                    }
+                ]
+            },
+            {
+                id: 1700000001002,
+                title: "Echoes of the Forgotten Kingdom",
+                author: "Elena Rostova",
+                genre: "Fantasy",
+                language: "English",
+                cover: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=500&q=80",
+                synopsis: "An epic tale of magic, lost thrones, and a young traveler destined to awaken an ancient realm.",
+                views: 215,
+                comments: [],
+                chapters: [
+                    {
+                        number: 1,
+                        title: "Chapter 1: Whispers in the Wind",
+                        content: "The mountains of Eldoria had stood silent for a thousand years. To the villagers below, they were simply jagged peaks touching the sky. But to Lyra, they held a song—a faint, rhythmic hum that only she could hear.\n\nShe gripped her staff tighter as the wind whipped her cloak around her shoulders. Today was the day she would cross the ridge and find out what lay beyond."
+                    }
+                ]
+            },
+            {
+                id: 1700000001003,
+                title: "A Summer in Kyoto",
+                author: "Kenji Sato",
+                genre: "Romance",
+                language: "English",
+                cover: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=500&q=80",
+                synopsis: "A gentle, heartwarming story of two artists finding inspiration and love beneath blooming cherry blossoms.",
+                views: 89,
+                comments: [],
+                chapters: [
+                    {
+                        number: 1,
+                        title: "Chapter 1: The Tea House",
+                        content: "The paper lanterns cast a warm, golden glow across the wooden veranda. Rain tapped softly against the bamboo garden outside, creating a peaceful rhythm that matched the quiet afternoon.\n\nAoi sat with her sketchbook open, charcoal pencil hovering over the paper. She looked up just as the sliding door opened, and a stranger stepped in out of the sudden summer shower."
+                    }
+                ]
+            },
+            {
+                id: 1700000001004,
+                title: "شام کا مسافر (The Evening Traveler)",
+                author: "احمد رضا (Ahmed Raza)",
+                genre: "Romance",
+                language: "Urdu",
+                cover: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=500&q=80",
+                synopsis: "ایک خوبصورت اردو ناول جو محبت، یادوں اور زندگی کے سفر کے گرد گھومتا ہے۔",
+                views: 110,
+                comments: [],
+                chapters: [
+                    {
+                        number: 1,
+                        title: "باب اول: پرانی یادیں",
+                        content: "سورج ڈوب رہا تھا اور آسمان پر نارنجی اور سرمئی رنگوں کا ایک حسین امتزاج بکھرا ہوا تھا۔ ریلوے اسٹیشن کے پلیٹ فارم پر مسافروں کا ہجوم کم ہو رہا تھا جب اس نے پہلی بار وہ پرانی آواز سنی۔\n\nوقت جیسے تھم گیا ہو، اور ماضی کے دریچے ایک بار پھر کھل گئے ہوں..."
+                    }
+                ]
+            },
+            {
+                id: 1700000001005,
+                title: "خوابوں کی بستی (City of Dreams)",
+                author: "فاطمہ خان (Fatima Khan)",
+                genre: "Fantasy",
+                language: "Urdu",
+                cover: "https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=500&q=80",
+                synopsis: "ایک طلسماتی دنیا کی کہانی جہاں خواب حقیقت کا روپ دھار لیتے ہیں۔",
+                views: 178,
+                comments: [],
+                chapters: [
+                    {
+                        number: 1,
+                        title: "باب اول: ان کہی کہانیاں",
+                        content: "رات کے اس پہر جب پوری بستی گہری نیند سو رہی تھی، کتابوں کے پرانے صندوق سے ہلکی سی روشنی نکلنے لگی۔ علی نے حیرت سے آگے بڑھ کر صندوق کا ڈھکن اٹھایا۔\n\nان اندر رکھی ہوئی سنہری جلد والی کتاب کے صفحات خود بخود پلٹنے لگے تھے..."
+                    }
+                ]
+            }
+        ];
+
+        // Initialize novels instantly from localStorage so they never flicker or vanish on load
+let savedNovels = localStorage.getItem('pocket_novels');
+let novels = (savedNovels && JSON.parse(savedNovels).length > 0) 
+  ? JSON.parse(savedNovels) 
+  : defaultSampleNovels;
+
+// Load data asynchronously on startup
+// Load data asynchronously on startup safely
+async function initCloudData() {
+  const cloudNovels = await loadNovelsFromCloud();
+  if (cloudNovels && Array.isArray(cloudNovels) && cloudNovels.length > 0) {
+    novels = cloudNovels;
+    localStorage.setItem('pocket_novels', JSON.stringify(novels));
+  } else {
+    // Fallback to local storage if cloud is empty
+    const localNovels = JSON.parse(localStorage.getItem('pocket_novels'));
+    if (localNovels && localNovels.length > 0) {
+      novels = localNovels;
+    } else if (typeof defaultSampleNovels !== 'undefined' && defaultSampleNovels.length > 0) {
+      novels = defaultSampleNovels;
+      localStorage.setItem('pocket_novels', JSON.stringify(novels));
+    }
+  }
+  // Refresh library view after data arrives
+  if (typeof renderLibrary === 'function') renderLibrary();
+}
+
+// Run the cloud sync on startup
+initCloudData();
+
+        let savedBookmarks = JSON.parse(localStorage.getItem('pocket_bookmarks')) || [];
+        let authorBios = JSON.parse(localStorage.getItem('pocket_author_bios')) || {};
+        let readingProgress = JSON.parse(localStorage.getItem('pocket_reading_progress')) || null;
+        
+        let userProfile = JSON.parse(localStorage.getItem('pocket_user_profile')) || {
+            name: "Author Name",
+            bio: "Tap Edit Profile to write your author bio and add a picture!",
+            picture: ""
+        };
+
+        let currentGenreFilter = 'All';
+        let uploadedCoverDataUrl = "";
+        let uploadedProfilePicUrl = userProfile.picture || "";
+        let currentNovel = null;
+        let currentChapterIdx = 0;
+        let currentFontSize = 18;
+
+        function saveToStorage() {
+  if (novels && novels.length > 0) {
+    localStorage.setItem('pocket_novels', JSON.stringify(novels));
+  }
+  localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks));
+  authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture };
+  localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
+  if (readingProgress) localStorage.setItem('pocket_reading_progress', JSON.stringify(readingProgress));
+  
+  if (currentUser) {
+    saveNovelsToCloud(novels);
+  }
+}
+
+let currentUser = null;
+
+// Initialize Auth state listener
+// Initialize Auth state listener
+firebase.auth().onAuthStateChanged(async (user) => {
+    currentUser = user;
+    const authBtn = document.getElementById('authBtn');
+
+    if (user) {
+        console.log("Logged in as:", user.email || user.displayName);
+        if (authBtn) authBtn.innerHTML = `<i class="fa-solid fa-right-from-bracket"></i> Sign Out`;
+
+        try {
+            // Fetch saved profile from Firestore
+            const userDoc = await db.collection("users").doc(user.uid).get();
+            if (userDoc.exists) {
+                const data = userDoc.data();
+                userProfile.name = data.name || user.displayName || "Anonymous Author";
+                userProfile.email = data.email || user.email || "";
+                userProfile.bio = data.bio || "";
+                userProfile.picture = data.photoURL || data.picture || user.photoURL || "";
+                userProfile.facebookUrl = data.facebookUrl || "";
+            } else {
+                userProfile.name = user.displayName || "Anonymous Author";
+                userProfile.email = user.email || "";
+                userProfile.picture = user.photoURL || "";
+                userProfile.bio = "";
+                userProfile.facebookUrl = "";
+            }
+        } catch (err) {
+            console.error("Error loading user profile from Firestore:", err);
+            userProfile.name = user.displayName || "Anonymous Author";
+            userProfile.picture = user.photoURL || "";
+        }
+
+        // FORCE UI UPDATE: Immediately refresh UI elements
+        updateProfileUI();
+
+        // Load user cloud novels
+        await syncLocalNovelsToCloud();
+        const cloudNovels = await loadNovelsFromCloud();
+        if (cloudNovels) {
+            novels = cloudNovels;
+            localStorage.setItem('pocket_novels', JSON.stringify(novels));
+        }
+        if (typeof renderLibrary === 'function') renderLibrary();
+
+    } else {
+        if (authBtn) authBtn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> Sign In`;
+        userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
+        updateProfileUI();
+    }
+});
+// Toggle login/logout when the header button is clicked
+// Toggle login/logout or offer sign-in options when header button is clicked
+// Open the custom auth modal or sign out if already logged in
+function handleAuthClick() {
+  if (currentUser) {
+    if (confirm("Are you sure you want to sign out?")) {
+      signOutUser();
+    }
+  } else {
+    const modal = document.getElementById('authModal');
+    if (modal) modal.style.display = 'flex';
+  }
+}
+
+// Close the custom auth modal
+function closeAuthModal() {
+  const modal = document.getElementById('authModal');
+  if (modal) modal.style.display = 'none';
+}
+
+// Handle email login submission from modal
+function handleEmailLoginSubmit() {
+  const email = document.getElementById('authEmailInput').value.trim();
+  const password = document.getElementById('authPasswordInput').value;
+  if (!email || !password) {
+    alert("Please enter both email and password.");
+    return;
+  }
+  signInWithEmail(email, password);
+  closeAuthModal();
+}
+
+// Handle email signup submission from modal
+function handleEmailSignupSubmit() {
+  const email = document.getElementById('authEmailInput').value.trim();
+  const password = document.getElementById('authPasswordInput').value;
+  if (!email || !password) {
+    alert("Please enter both email and password.");
+    return;
+  }
+  signUpWithEmail(email, password);
+  closeAuthModal();
+}
+
+
+// Google Sign-In helper
+function signInWithGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    firebase.auth().signInWithPopup(provider)
+        .then((result) => {
+            const user = result.user;
+
+            // 1. Update local memory state immediately
+            userProfile.name = user.displayName || "Anonymous Author";
+            userProfile.email = user.email || "";
+            userProfile.picture = user.photoURL || "";
+
+            // Auto-populate Google Profile details
+            const userData = {
+                uid: user.uid,
+                name: userProfile.name,
+                email: user.email,
+                photoURL: userProfile.picture,
+                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            // 2. Save to Firestore users collection
+            return db.collection("users").doc(user.uid).set(userData, { merge: true });
+        })
+        .then(() => {
+            console.log("Profile synced with Google!");
+            
+            // 3. Refresh UI and close modal
+            updateProfileUI();
+            closeAuthModal();
+        })
+        .catch((error) => console.error("Google Auth error:", error.message));
+}
+// Sign in with Email and Password
+function signInWithEmail(email, password) {
+  firebase.auth().signInWithEmailAndPassword(email, password)
+    .then((userCredential) => {
+      console.log("Logged in with email:", userCredential.user.email);
+    })
+    .catch((error) => {
+      alert("Sign-in error: " + error.message);
+    });
+}
+
+// Register a new user with Email and Password
+function signUpWithEmail(email, password) {
+  firebase.auth().createUserWithEmailAndPassword(email, password)
+    .then((userCredential) => {
+      console.log("Account created & logged in:", userCredential.user.email);
+    })
+    .catch((error) => {
+      alert("Sign-up error: " + error.message);
+    });
+}
+
+// Sign Out helper
+function signOutUser() {
+  firebase.auth().signOut()
+    .then(() => console.log("User signed out!"))
+    .catch((error) => console.error("Sign-out error:", error.message));
+}
+
+// User-Specific Cloud Save
+async function saveNovelsToCloud(novelsData) {
+  if (!currentUser) return; // Only save to cloud if logged in
+  try {
+    await db.collection("users").doc(currentUser.uid).collection("appData").doc("userNovels").set({
+      novels: novelsData,
+      lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    console.log("User library saved to cloud!");
+  } catch (error) {
+    console.error("Error saving user library: ", error);
+  }
+}
+
+// User-Specific Cloud Load
+async function loadUserNovelsFromCloud(uid) {
+  try {
+    const doc = await db.collection("users").doc(uid).collection("appData").doc("userNovels").get();
+    if (doc.exists) {
+      novels = doc.data().novels;
+      localStorage.setItem('pocket_novels', JSON.stringify(novels));
+    } else {
+      saveNovelsToCloud(novels);
+    }
+    if (typeof renderLibrary === 'function') renderLibrary();
+  } catch (error) {
+    console.error("Error loading user library: ", error);
+  }
+}
+        function updateProfileUI() {
+    const nameEl = document.getElementById('profileNameDisplay');
+    const bioEl = document.getElementById('profileBioDisplay');
+    const socialEl = document.getElementById('profileSocialDisplay');
+
+    if (nameEl) nameEl.innerText = userProfile.name || "Author Name";
+    if (bioEl) bioEl.innerText = userProfile.bio || "No bio added yet.";
+
+    // Render Social Link
+    if (socialEl) {
+        if (userProfile.facebookUrl) {
+            socialEl.innerHTML = `<a href="${userProfile.facebookUrl}" target="_blank" style="color: #38bdf8; text-decoration: none;"><i class="fa-brands fa-facebook"></i> Author Facebook Page</a>`;
+        } else {
+            socialEl.innerHTML = '';
+        }
+    }
+
+    const bookmarkEl = document.getElementById('profileBookmarkStats');
+    if (bookmarkEl) bookmarkEl.innerHTML = `<i class="fa-solid fa-bookmark"></i> ${savedBookmarks.length} Bookmarks`;
+
+    const picContainer = document.getElementById('profilePicContainer');
+    const headerAvatar = document.getElementById('headerAvatar');
+
+    if (userProfile.picture) {
+        if (picContainer) picContainer.innerHTML = `<img src="${userProfile.picture}">`;
+        if (headerAvatar) headerAvatar.innerHTML = `<img src="${userProfile.picture}">`;
+    } else {
+        const initials = (userProfile.name || "ME").substring(0, 2).toUpperCase();
+        if (picContainer) picContainer.innerHTML = `<span>${initials}</span>`;
+        if (headerAvatar) headerAvatar.innerHTML = `<span>${initials}</span>`;
+    }
+
+    const adminSection = document.getElementById('adminSection');
+    if (adminSection) {
+        if (userProfile.name === "Ujala Naz" || (currentUser && currentUser.email === "roshaani681@gmail.com")) {
+            adminSection.style.display = 'block';
+            renderAdminAuthorsTable();
+        } else {
+            adminSection.style.display = 'none';
+        }
+    }
+}
+
+        function toggleAdminDirectory() {
+    const container = document.getElementById('adminDirectoryContainer');
+    if (container.style.display === 'none' || container.style.display === '') {
+        if (typeof renderAdminAuthorsTable === 'function') {
+            renderAdminAuthorsTable();
+        }
+        container.style.display = 'block';
+    } else {
+        container.style.display = 'none';
+    }
+}
+
+        function renderAdminAuthorsTable() {
+            const tableBody = document.getElementById('adminAuthorsTableBody');
+            if(!tableBody) return;
+
+            const authorsMap = {};
+            novels.forEach(n => {
+                if(!authorsMap[n.author]) {
+                    authorsMap[n.author] = { count: 0, bio: (authorBios[n.author] ? authorBios[n.author].bio : "No bio provided") };
+                }
+                authorsMap[n.author].count++;
+            });
+            if(!authorsMap[userProfile.name]) {
+                authorsMap[userProfile.name] = { count: 0, bio: userProfile.bio };
+            }
+
+            const authorNames = Object.keys(authorsMap);
+            if(authorNames.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="3" style="color: var(--text-muted); text-align: center;">No authors registered yet.</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = authorNames.map(name => `
+                <tr>
+                    <td style="font-weight: 700; color: var(--primary-light); cursor: pointer;" onclick="openAuthorProfile('${name}')">${name}</td>
+                    <td style="color: var(--text-muted);">${authorsMap[name].bio}</td>
+                    <td>${authorsMap[name].count} book(s)</td>
+                </tr>
+            `).join('');
+        }
+
+        function toggleEditProfile() {
+            const card = document.getElementById('editProfileCard');
+            card.style.display = card.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function previewProfilePic(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedProfilePicUrl = e.target.result;
+                    const preview = document.getElementById('profilePicPreview');
+                    preview.src = uploadedProfilePicUrl;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function handleSaveProfile(e) {
+    e.preventDefault();
+    const oldName = userProfile.name;
+    userProfile.name = document.getElementById('editNameInput').value;
+    userProfile.bio = document.getElementById('editBioInput').value;
+    userProfile.facebookUrl = document.getElementById('editSocialInput').value.trim();
+    if (uploadedProfilePicUrl) userProfile.picture = uploadedProfilePicUrl;
+
+    novels.forEach(n => {
+        if (n.author === oldName || n.author === "Author Name") n.author = userProfile.name;
+    });
+
+    saveToStorage();
+    updateProfileUI();
+    toggleEditProfile();
+
+    // --- SAVE TO FIRESTORE CLOUD ---
+    if (currentUser) {
+        try {
+            await db.collection("users").doc(currentUser.uid).set({
+                name: userProfile.name,
+                bio: userProfile.bio,
+                facebookUrl: userProfile.facebookUrl,
+                photoURL: userProfile.picture,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            console.log("Profile updated in Firestore!");
+        } catch (err) {
+            console.error("Error saving profile to Firestore:", err);
+        }
+    }
+
+    alert("Profile updated successfully!");
+    renderProfileBooks();
+}
+
+        function switchView(viewId, saveState = false) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            if(viewId === 'exploreView') {
+                document.getElementById('navExplore').classList.add('active');
+                renderContinueReading();
+            }
+            if(viewId === 'libraryView') document.getElementById('navLibrary').classList.add('active');
+            if(viewId === 'studioView') document.getElementById('navStudio').classList.add('active');
+
+            if(viewId === 'exploreView') applyFilters();
+            if(viewId === 'libraryView') renderLibrary();
+            if(viewId === 'profileView') renderProfileBooks();
+
+            if(saveState) localStorage.setItem('pocket_last_view', viewId);
+        }
+
+        function renderContinueReading() {
+            const container = document.getElementById('continueReadingContainer');
+            if(!readingProgress || !novels.length) {
+                container.innerHTML = '';
+                return;
+            }
+            const novel = novels.find(n => n.id === readingProgress.novelId);
+            if(!novel) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="continue-banner">
+                    <div>
+                        <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; opacity: 0.8;">Continue Reading</div>
+                        <div style="font-size: 1.1rem; font-weight: 800; margin: 2px 0;">${novel.title}</div>
+                        <div style="font-size: 0.85rem; opacity: 0.9;">Chapter ${readingProgress.chapterIdx + 1}: ${novel.chapters[readingProgress.chapterIdx].title}</div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="resumeReading()"><i class="fa-solid fa-play"></i> Resume</button>
+                </div>
+            `;
+        }
+
+        function resumeReading() {
+            if(!readingProgress) return;
+            currentNovel = novels.find(n => n.id === readingProgress.novelId);
+            if(currentNovel) {
+                startReading(readingProgress.chapterIdx);
+            }
+        }
+
+        function filterByGenre(genre, element) {
+            currentGenreFilter = genre;
+            document.querySelectorAll('.genre-tab').forEach(btn => btn.classList.remove('active'));
+            if(element) element.classList.add('active');
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            let filtered = novels;
+            if (currentGenreFilter !== 'All') {
+                filtered = filtered.filter(n => n.genre && n.genre.toLowerCase() === currentGenreFilter.toLowerCase());
+            }
+            if (query) {
+                filtered = filtered.filter(n => 
+                    n.title.toLowerCase().includes(query) || 
+                    n.author.toLowerCase().includes(query) || 
+                    n.genre.toLowerCase().includes(query) ||
+                    (n.language && n.language.toLowerCase().includes(query))
+                );
+            }
+            renderGrid(filtered, 'novelGrid');
+        }
+
+        function previewGalleryImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedCoverDataUrl = e.target.result;
+                    const preview = document.getElementById('coverPreview');
+                    preview.src = uploadedCoverDataUrl;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function renderGrid(dataset, targetContainerId) {
+            const grid = document.getElementById(targetContainerId);
+            if(!grid) return;
+            if(dataset.length === 0) {
+                grid.innerHTML = `<p style="color: var(--text-muted); grid-column: 1/-1;">No novels found in this section.</p>`;
+                return;
+            }
+            grid.innerHTML = dataset.map(n => `
+                <div class="novel-card">
+                    <span class="lang-badge">${n.language || 'English'}</span>
+                    <span class="genre-badge">${n.genre || 'General'}</span>
+                    <img class="novel-cover" src="${n.cover}" onclick="openNovelDetail(${n.id})">
+                    <div class="novel-info" onclick="openNovelDetail(${n.id})">
+                        <div class="novel-title">${n.title}</div>
+                    </div>
+                    <div style="padding: 0 0.95rem 0.95rem 0.95rem;">
+                        <span class="novel-author" onclick="event.stopPropagation(); openAuthorProfile('${n.author}')">By ${n.author}</span>
+                                            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <div class="novel-stats"><i class="fa-solid fa-eye"></i> ${n.views || 0} views</div>
+                        <div class="novel-stats"><i class="fa-solid fa-book"></i> ${n.chapters ? n.chapters.length : 0} Chapters</div>
+                    </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openAuthorProfile(authorName) {
+            const pubName = document.getElementById('publicAuthorName');
+            const pubBio = document.getElementById('publicAuthorBio');
+            const pubPic = document.getElementById('publicAuthorPic');
+            
+            pubName.innerText = authorName;
+            
+            let bioText = "No bio provided.";
+            let picUrl = "";
+            if(authorName === userProfile.name) {
+                bioText = userProfile.bio;
+                picUrl = userProfile.picture;
+            } else if(authorBios[authorName]) {
+                bioText = authorBios[authorName].bio || "No bio provided.";
+                picUrl = authorBios[authorName].picture || "";
+            }
+            pubBio.innerText = bioText;
+
+            if(picUrl) {
+                pubPic.innerHTML = `<img src="${picUrl}">`;
+            } else {
+                pubPic.innerHTML = `<span>${authorName.substring(0, 2).toUpperCase()}</span>`;
+            }
+
+            const authorBooks = novels.filter(n => n.author.trim().toLowerCase() === authorName.trim().toLowerCase());
+            renderGrid(authorBooks, 'publicAuthorBooksGrid');
+            switchView('authorPublicView');
+        }
+
+        function openNovelDetail(id) {
+            currentNovel = novels.find(n => n.id === id);
+            currentNovel.views = (currentNovel.views || 0) + 1;
+            saveToStorage();
+
+            const container = document.getElementById('detailContainer');
+            const isBookmarked = savedBookmarks.includes(id);
+            const isAuthor = (currentNovel.author.trim().toLowerCase() === userProfile.name.trim().toLowerCase());
+
+                        const commentsHtml = (currentNovel.comments || []).map(c => `
+                <div style="background: var(--bg-card, #1e1e2f); border: 1px solid var(--border-color, #2a2a40); border-radius: 8px; padding: 12px 15px; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <strong style="font-size: 0.9rem; color: var(--text-main, #fff);">${c.author || 'Reader'}</strong>
+                        <span style="font-size: 0.75rem; color: var(--text-muted, #888);">${c.date || ''}</span>
+                    </div>
+                    <p style="font-size: 0.9rem; color: var(--text-sub, #ccc); margin: 0; line-height: 1.4;">${c.text}</p>
+                </div>
+            `).join('') || '<p style="color: var(--text-muted); font-size: 0.85rem;">No comments yet.</p>';
+
+            container.innerHTML = `
+                <h2>${currentNovel.title}</h2>
+                <p style="margin-bottom: 0.5rem;">By <span style="color: var(--primary-light); cursor: pointer; text-decoration: underline;" onclick="openAuthorProfile('${currentNovel.author}')">${currentNovel.author}</span> • <span style="background: rgba(99,102,241,0.2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--primary);">${currentNovel.genre}</span> • <span style="background: rgba(236,72,153,0.2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--secondary); color: #ec4899;">${currentNovel.language || 'English'}</span></p>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;"><i class="fa-solid fa-eye"></i> ${currentNovel.views} Views</p>
+                
+                <img src="${currentNovel.cover}" style="max-height: 300px; border-radius: 12px; margin-bottom: 1rem;">
+                <p style="line-height: 1.6; margin-bottom: 1.5rem;">${currentNovel.synopsis}</p>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                    <button class="btn" onclick="startReading(0)"><i class="fa-solid fa-book-open"></i> Read</button>
+                    <button class="btn btn-secondary" onclick="toggleBookmark(${currentNovel.id})"><i class="fa-solid fa-bookmark"></i> ${isBookmarked ? 'Bookmarked' : 'Bookmark'}</button>
+                    <button class="btn btn-secondary" onclick="shareNovel('${currentNovel.title}')"><i class="fa-solid fa-share-nodes"></i> Share</button>
+                    ${isAuthor ? `
+                        <button class="btn btn-success" onclick="openAddChapterModal()"><i class="fa-solid fa-plus"></i> Add Chapter</button>
+                        <button class="btn btn-danger" onclick="deleteNovel(${currentNovel.id})"><i class="fa-solid fa-trash"></i> Delete</button>
+                    ` : ''}
+                </div>
+
+                <h3>Chapters (${currentNovel.chapters.length})</h3>
+                <div style="margin-top: 10px; margin-bottom: 2rem;">
+                    ${currentNovel.chapters.map((ch, idx) => `
+                        <div style="background: var(--bg-card); padding: 12px; border-radius: 8px; margin-bottom: 8px; cursor: pointer;" onclick="startReading(${idx})">
+                            ${ch.title}
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="comments-section">
+                    <h3><i class="fa-solid fa-comments"></i> Reader Comments (${(currentNovel.comments || []).length})</h3>
+                    <form onsubmit="handleAddComment(event)" style="margin: 1rem 0;">
+                        <div class="form-group" style="margin-bottom: 0.8rem;">
+                            <input type="text" id="commentTextInput" class="form-control" placeholder="Write a comment..." required>
+                        </div>
+                        <button type="submit" class="btn btn-secondary" style="padding: 6px 16px; font-size: 0.85rem;"><i class="fa-solid fa-paper-plane"></i> Post</button>
+                    </form>
+                    <div id="commentsContainer">${commentsHtml}</div>
+                </div>
+            `;
+            switchView('detailView');
+        }
+
+        function shareNovel(title) {
+            if (navigator.share) {
+                navigator.share({
+                    title: title,
+                    text: `Check out "${title}" on Pocket Novels!`,
+                    url: window.location.href
+                }).catch(() => {});
+            } else {
+                alert(`Link copied for "${title}"!`);
+            }
+        }
+
+        function handleAddComment(e) {
+            e.preventDefault();
+            const textInput = document.getElementById('commentTextInput');
+            if(!textInput.value.trim()) return;
+            if(!currentNovel.comments) currentNovel.comments = [];
+            currentNovel.comments.unshift({
+                author: userProfile.name || "Reader",
+                text: textInput.value.trim(),
+                date: new Date().toLocaleDateString()
+            });
+            const idx = novels.findIndex(n => n.id === currentNovel.id);
+            if(idx !== -1) novels[idx] = currentNovel;
+            saveToStorage();
+            openNovelDetail(currentNovel.id);
+        }
+
+        function deleteNovel(id) {
+            if(confirm("Are you sure you want to delete this novel?")) {
+                novels = novels.filter(n => n.id !== id);
+                savedBookmarks = savedBookmarks.filter(bId => bId !== id);
+                saveToStorage();
+                alert("Novel deleted.");
+                switchView('profileView', true);
+            }
+        }
+
+        function handlePublishNovel(e) {
+            e.preventDefault();
+            const newNovel = {
+                id: Date.now(),
+                title: document.getElementById('pubTitle').value,
+                author: userProfile.name,
+                genre: document.getElementById('pubGenre').value,
+                        language: document.getElementById('pubLanguage').value,
+        alignment: document.getElementById('pubAlignment').value,
+        cover: uploadedCoverDataUrl,
+        synopsis: document.getElementById('pubSynopsis').value,
+                views: 0,
+                comments: [],
+                chapters: [{
+                    number: 1,
+                    title: document.getElementById('pubEpTitle').value,
+                    content: document.getElementById('pubEpContent').value
+                }]
+            };
+            novels.unshift(newNovel);
+            saveToStorage();
+            alert("Novel published successfully!");
+            document.getElementById('publishForm').reset();
+            document.getElementById('coverPreview').style.display = 'none';
+            switchView('profileView', true);
+        }
+
+        function openAddChapterModal() { document.getElementById('addChapterModal').classList.add('active'); }
+        function closeAddChapterModal() { document.getElementById('addChapterModal').classList.remove('active'); }
+
+        function handleSaveNewChapter(e) {
+            e.preventDefault();
+            currentNovel.chapters.push({
+                number: currentNovel.chapters.length + 1,
+                title: document.getElementById('newChapTitle').value,
+                content: document.getElementById('newChapContent').value
+            });
+            const idx = novels.findIndex(n => n.id === currentNovel.id);
+            if(idx !== -1) novels[idx] = currentNovel;
+            saveToStorage();
+            closeAddChapterModal();
+            document.getElementById('newChapTitle').value = '';
+            document.getElementById('newChapContent').value = '';
+            alert("Chapter added!");
+            openNovelDetail(currentNovel.id);
+        }
+
+        function startReading(idx) {
+            currentChapterIdx = idx;
+            readingProgress = { novelId: currentNovel.id, chapterIdx: idx };
+            saveToStorage();
+            document.getElementById('readerModal').classList.add('active');
+            updateReader();
+        }
+
+        function updateReader() {
+            const ch = currentNovel.chapters[currentChapterIdx];
+            document.getElementById('readerHeaderTitle').innerText = ch.title;
+            document.getElementById('chapterIndicator').innerText = `Chapter ${currentChapterIdx + 1} of ${currentNovel.chapters.length}`;
+            const readerContainer = document.getElementById('readerText');
+readerContainer.innerHTML = `<h2>${ch.title}</h2><div style="white-space: pre-wrap; line-height: 1.8;">${ch.content}</div>`;
+readerContainer.style.textAlign = currentNovel.alignment || 'ltr';
+readerContainer.dir = currentNovel.alignment === 'rtl' ? 'rtl' : 'ltr';
+        }
+
+        function setReaderTheme(theme) {
+            document.body.className = '';
+            if(theme !== 'dark') document.body.classList.add(`theme-${theme}`);
+        }
+
+        function changeFontSize(delta) {
+            currentFontSize = Math.max(14, Math.min(28, currentFontSize + delta));
+            document.documentElement.style.setProperty('--reader-font-size', currentFontSize + 'px');
+        }
+
+        function closeReader() { document.getElementById('readerModal').classList.remove('active'); }
+        function nextChapter() { if(currentChapterIdx < currentNovel.chapters.length - 1) { currentChapterIdx++; readingProgress.chapterIdx = currentChapterIdx; saveToStorage(); updateReader(); } }
+        function prevChapter() { if(currentChapterIdx > 0) { currentChapterIdx--; readingProgress.chapterIdx = currentChapterIdx; saveToStorage(); updateReader(); } }
+
+        function toggleBookmark(id) {
+            if(savedBookmarks.includes(id)) savedBookmarks = savedBookmarks.filter(b => b !== id);
+            else savedBookmarks.push(id);
+            saveToStorage();
+            updateProfileUI();
+            openNovelDetail(id);
+        }
+
+        function renderLibrary() {
+            const bookmarked = novels.filter(n => savedBookmarks.includes(n.id));
+            renderGrid(bookmarked, 'libraryGrid');
+        }
+
+        function renderProfileBooks() {
+            updateProfileUI();
+            const myBooks = novels.filter(n => n.author.trim().toLowerCase() === userProfile.name.trim().toLowerCase());
+            renderGrid(myBooks, 'myPublishedGrid');
+        }
+
+        updateProfileUI();
+        const lastView = localStorage.getItem('pocket_last_view') || 'exploreView';
+        switchView(lastView);
+        async function saveNovelsToCloud(novelsData) {
+  try {
+    await db.collection("appData").doc("userNovels").set({
+      novels: novelsData,
+      lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    console.log("Novels successfully saved to cloud!");
+  } catch (error) {
+    console.error("Error saving to Firestore: ", error);
+  }
+}
+
+async function loadNovelsFromCloud() {
+  try {
+    const doc = await db.collection("appData").doc("userNovels").get();
+    if (doc.exists) {
+      return doc.data().novels;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error loading from Firestore: ", error);
+    return null;
+  }
+    // Automatically sync local storage novels to cloud when logging in
+async function syncLocalNovelsToCloud() {
+  if (!currentUser) return;
+  
+  const localData = localStorage.getItem('pocket_novels');
+  if (localData) {
+    try {
+      const parsedNovels = JSON.parse(localData);
+      if (Array.isArray(parsedNovels) && parsedNovels.length > 0) {
+        // Save local novels to user's Firestore document
+        await db.collection("appData").doc(currentUser.uid).set({
+          novels: parsedNovels,
+          lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log("Local novels successfully synced to cloud!");
+      }
+    } catch (error) {
+      console.error("Error syncing local novels to cloud:", error);
+    }
+  }
+}
+
+}
+    </script>
+    <!-- Professional Auth Modal Overlay -->
+<div id="authModal" class="auth-modal-overlay" style="display: none;">
+  <div class="auth-modal-content">
+    <div class="auth-modal-header">
+      <h3>Sign In to Pocket Novels</h3>
+      <span class="auth-close-btn" onclick="closeAuthModal()">&times;</span>
+    </div>
+    <div class="auth-modal-body">
+      <!-- Google Button -->
+      <button class="google-signin-btn" onclick="signInWithGoogle(); closeAuthModal();">
+        <i class="fa-brands fa-google"></i> Continue with Google
+      </button>
+      
+      <div class="auth-divider"><span>OR EMAIL</span></div>
+      
+      <!-- Email & Password Inputs -->
+      <div class="auth-form-group">
+        <input type="email" id="authEmailInput" placeholder="Email address" class="auth-input">
+        <input type="password" id="authPasswordInput" placeholder="Password (min 6 chars)" class="auth-input">
+      </div>
+      
+      <!-- Action Buttons -->
+      <div class="auth-buttons-row">
+        <button class="auth-action-btn primary" onclick="handleEmailLoginSubmit()">Sign In</button>
+        <button class="auth-action-btn secondary" onclick="handleEmailSignupSubmit()">Create Account</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(() => console.log('Service Worker registered successfully'))
+        .catch(err => console.log('Service Worker registration failed:', err));
+    });
+  }
+</script>
+
 </body>
 </html>
