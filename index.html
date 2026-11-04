@@ -1338,11 +1338,13 @@ async function loadNovelsFromCloud() {
   try {
     if (!currentUser) return;
     await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").set({
+      name: profileData.name || "",
       bio: profileData.bio || "",
       facebookUrl: profileData.facebookUrl || "",
+      picture: profileData.picture || "",
       lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
-    console.log("Profile successfully saved to cloud!");
+    console.log("Complete profile successfully saved to cloud!");
   } catch (error) {
     console.error("Error saving profile to cloud:", error);
   }
