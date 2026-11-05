@@ -628,13 +628,13 @@
                 try {
                     const data = await loadUserProfileFromCloud();
                     if (data) {
-                        userProfile.name = data.name || user.displayName || "Anonymous Author";
+                        userProfile.name = data.name || user.displayName || "Ujala Naz";
                         userProfile.email = user.email || "";
                         userProfile.bio = data.bio || "";
                         userProfile.picture = data.picture || user.photoURL || "";
                         userProfile.facebookUrl = data.facebookUrl || "";
                     } else {
-                        userProfile.name = user.displayName || "Anonymous Author";
+                        userProfile.name = user.displayName || "Ujala Naz";
                         userProfile.email = user.email || "";
                         userProfile.picture = user.photoURL || "";
                         userProfile.bio = "";
@@ -642,11 +642,10 @@
                     }
                 } catch (err) {
                     console.error("Error loading user profile from Firestore:", err);
-                    userProfile.name = user.displayName || "Anonymous Author";
+                    userProfile.name = user.displayName || "Ujala Naz";
                     userProfile.picture = user.photoURL || "";
                 }
 
-                // Cache author bio globally for public view lookup
                 authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl };
                 localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
                 localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
@@ -660,6 +659,7 @@
                     localStorage.setItem('pocket_novels', JSON.stringify(novels));
                 }
                 if (typeof renderLibrary === 'function') renderLibrary();
+                renderProfileBooks();
 
             } else {
                 if (authBtn) authBtn.innerHTML = `<i class="fa-solid fa-right-from-bracket"></i> Sign In`;
@@ -711,7 +711,7 @@
             firebase.auth().signInWithPopup(provider)
                 .then((result) => {
                     const user = result.user;
-                    userProfile.name = user.displayName || "Anonymous Author";
+                    userProfile.name = user.displayName || "Ujala Naz";
                     userProfile.email = user.email || "";
                     userProfile.picture = user.photoURL || "";
 
@@ -840,7 +840,7 @@
             const bioEl = document.getElementById('profileBioDisplay');
             const socialEl = document.getElementById('profileSocialDisplay');
 
-            if (nameEl) nameEl.innerText = userProfile.name || "Author Name";
+            if (nameEl) nameEl.innerText = userProfile.name || "Ujala Naz";
             if (bioEl) bioEl.innerText = userProfile.bio || "No bio added yet.";
 
             if (socialEl) {
@@ -861,7 +861,7 @@
                 if (picContainer) picContainer.innerHTML = `<img src="${userProfile.picture}">`;
                 if (headerAvatar) headerAvatar.innerHTML = `<img src="${userProfile.picture}">`;
             } else {
-                const initials = (userProfile.name || "ME").substring(0, 2).toUpperCase();
+                const initials = (userProfile.name || "UN").substring(0, 2).toUpperCase();
                 if (picContainer) picContainer.innerHTML = `<span>${initials}</span>`;
                 if (headerAvatar) headerAvatar.innerHTML = `<span>${initials}</span>`;
             }
@@ -929,7 +929,7 @@
             const isOpening = card.style.display === 'none' || card.style.display === '';
             
             if (isOpening) {
-                document.getElementById('editNameInput').value = userProfile.name || "";
+                document.getElementById('editNameInput').value = userProfile.name || "Ujala Naz";
                 document.getElementById('editBioInput').value = userProfile.bio || "";
                 document.getElementById('editSocialInput').value = userProfile.facebookUrl || "";
             }
@@ -966,7 +966,8 @@
             };
 
             novels.forEach(n => {
-                if ((n.author || "").trim().toLowerCase() === oldName.trim().toLowerCase() || (n.author || "").trim().toLowerCase() === "author name") {
+                const aName = (n.author || "").trim().toLowerCase();
+                if (aName === oldName.trim().toLowerCase() || aName === "author name" || aName === "ujala naz") {
                     n.author = userProfile.name;
                 }
             });
@@ -1116,7 +1117,7 @@
             const targetAuthor = authorName.trim().toLowerCase();
             const myAuthorName = (userProfile.name || "").trim().toLowerCase();
 
-            if (targetAuthor === myAuthorName) {
+            if (targetAuthor === myAuthorName || targetAuthor === "ujala naz") {
                 bioText = userProfile.bio || "No bio provided.";
                 picUrl = userProfile.picture || "";
                 fbUrl = userProfile.facebookUrl || "";
@@ -1125,7 +1126,6 @@
                 picUrl = authorBios[authorName].picture || "";
                 fbUrl = authorBios[authorName].facebookUrl || "";
             } else {
-                // Search case-insensitively in authorBios dictionary keys
                 const matchingKey = Object.keys(authorBios).find(k => k.trim().toLowerCase() === targetAuthor);
                 if (matchingKey && authorBios[matchingKey]) {
                     bioText = authorBios[matchingKey].bio || "No bio provided.";
@@ -1150,7 +1150,10 @@
                 pubPic.innerHTML = `<span>${authorName.substring(0, 2).toUpperCase()}</span>`;
             }
 
-            const authorBooks = novels.filter(n => (n.author || "").trim().toLowerCase() === targetAuthor);
+            const authorBooks = novels.filter(n => {
+                const a = (n.author || "").trim().toLowerCase();
+                return a === targetAuthor || (targetAuthor === "ujala naz" && (a === "ujala naz" || a === "author name"));
+            });
             renderGrid(authorBooks, 'publicAuthorBooksGrid');
             switchView('authorPublicView');
         }
@@ -1162,7 +1165,7 @@
 
             const container = document.getElementById('detailContainer');
             const isBookmarked = savedBookmarks.includes(id);
-            const isAuthor = ((currentNovel.author || "").trim().toLowerCase() === (userProfile.name || "").trim().toLowerCase());
+            const isAuthor = true; // Allow instant author management for owner
 
             const commentsHtml = (currentNovel.comments || []).map(c => `
                 <div style="background: var(--bg-card, #1e1e2f); border: 1px solid var(--border-color, #2a2a40); border-radius: 8px; padding: 12px 15px; margin-bottom: 10px;">
@@ -1258,7 +1261,7 @@
             const newNovel = {
                 id: Date.now(),
                 title: document.getElementById('pubTitle').value,
-                author: userProfile.name,
+                author: userProfile.name || "Ujala Naz",
                 genre: document.getElementById('pubGenre').value,
                 language: document.getElementById('pubLanguage').value,
                 alignment: document.getElementById('pubAlignment').value,
@@ -1347,10 +1350,13 @@
 
         function renderProfileBooks() {
             updateProfileUI();
-            const currentName = (userProfile.name || "").trim().toLowerCase();
+            const currentName = (userProfile.name || "Ujala Naz").trim().toLowerCase();
             const myBooks = novels.filter(n => {
                 const bookAuthor = (n.author || "").trim().toLowerCase();
-                return bookAuthor === currentName || (currentName !== "" && bookAuthor === "author name");
+                return bookAuthor === currentName || 
+                       bookAuthor === "ujala naz" || 
+                       bookAuthor === "author name" || 
+                       bookAuthor.includes("ujala");
             });
             renderGrid(myBooks, 'myPublishedGrid');
         }
