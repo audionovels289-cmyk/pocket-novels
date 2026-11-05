@@ -386,6 +386,7 @@
                 <div class="profile-details">
                     <div class="profile-name" id="publicAuthorName">Author Name</div>
                     <div class="profile-bio" id="publicAuthorBio">Bio goes here.</div>
+                    <div class="profile-social" id="publicAuthorSocialDisplay" style="margin-top: 6px;"></div>
                 </div>
             </div>
             <h3>Books by this Author</h3>
@@ -589,7 +590,8 @@
         let userProfile = JSON.parse(localStorage.getItem('pocket_user_profile')) || {
             name: "Author Name",
             bio: "Tap Edit Profile to write your author bio and add a picture!",
-            picture: ""
+            picture: "",
+            facebookUrl: ""
         };
 
         let currentGenreFilter = 'All';
@@ -605,8 +607,9 @@
             localStorage.setItem('pocket_novels', JSON.stringify(novels));
           }
           localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks));
-          authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture };
+          authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl };
           localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
+          localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
           if (readingProgress) localStorage.setItem('pocket_reading_progress', JSON.stringify(readingProgress));
           
           if (currentUser) {
@@ -642,6 +645,11 @@
                     userProfile.name = user.displayName || "Anonymous Author";
                     userProfile.picture = user.photoURL || "";
                 }
+
+                // Cache author bio globally for public view lookup
+                authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl };
+                localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
+                localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
 
                 updateProfileUI();
 
@@ -887,13 +895,18 @@
 
             const authorsMap = {};
             novels.forEach(n => {
-                if(!authorsMap[n.author]) {
-                    authorsMap[n.author] = { count: 0, bio: (authorBios[n.author] ? authorBios[n.author].bio : "No bio provided") };
+                const authorKey = (n.author || "Anonymous").trim();
+                if(!authorsMap[authorKey]) {
+                    authorsMap[authorKey] = { 
+                        count: 0, 
+                        bio: (authorBios[authorKey] ? authorBios[authorKey].bio : "No bio provided") 
+                    };
                 }
-                authorsMap[n.author].count++;
+                authorsMap[authorKey].count++;
             });
-            if(!authorsMap[userProfile.name]) {
-                authorsMap[userProfile.name] = { count: 0, bio: userProfile.bio };
+            const currentAuthorKey = (userProfile.name || "").trim();
+            if(currentAuthorKey && !authorsMap[currentAuthorKey]) {
+                authorsMap[currentAuthorKey] = { count: 0, bio: userProfile.bio };
             }
 
             const authorNames = Object.keys(authorsMap);
@@ -941,13 +954,21 @@
         async function handleSaveProfile(e) {
             e.preventDefault();
             const oldName = userProfile.name;
-            userProfile.name = document.getElementById('editNameInput').value;
+            userProfile.name = document.getElementById('editNameInput').value.trim();
             userProfile.bio = document.getElementById('editBioInput').value;
             userProfile.facebookUrl = document.getElementById('editSocialInput').value.trim();
             if (uploadedProfilePicUrl) userProfile.picture = uploadedProfilePicUrl;
 
+            authorBios[userProfile.name] = { 
+                bio: userProfile.bio, 
+                picture: userProfile.picture, 
+                facebookUrl: userProfile.facebookUrl 
+            };
+
             novels.forEach(n => {
-                if (n.author === oldName || n.author === "Author Name") n.author = userProfile.name;
+                if ((n.author || "").trim().toLowerCase() === oldName.trim().toLowerCase() || (n.author || "").trim().toLowerCase() === "author name") {
+                    n.author = userProfile.name;
+                }
             });
 
             saveToStorage();
@@ -1084,27 +1105,52 @@
             const pubName = document.getElementById('publicAuthorName');
             const pubBio = document.getElementById('publicAuthorBio');
             const pubPic = document.getElementById('publicAuthorPic');
+            const pubSocial = document.getElementById('publicAuthorSocialDisplay');
             
             pubName.innerText = authorName;
             
             let bioText = "No bio provided.";
             let picUrl = "";
-            if(authorName === userProfile.name) {
-                bioText = userProfile.bio;
-                picUrl = userProfile.picture;
-            } else if(authorBios[authorName]) {
+            let fbUrl = "";
+
+            const targetAuthor = authorName.trim().toLowerCase();
+            const myAuthorName = (userProfile.name || "").trim().toLowerCase();
+
+            if (targetAuthor === myAuthorName) {
+                bioText = userProfile.bio || "No bio provided.";
+                picUrl = userProfile.picture || "";
+                fbUrl = userProfile.facebookUrl || "";
+            } else if (authorBios[authorName]) {
                 bioText = authorBios[authorName].bio || "No bio provided.";
                 picUrl = authorBios[authorName].picture || "";
+                fbUrl = authorBios[authorName].facebookUrl || "";
+            } else {
+                // Search case-insensitively in authorBios dictionary keys
+                const matchingKey = Object.keys(authorBios).find(k => k.trim().toLowerCase() === targetAuthor);
+                if (matchingKey && authorBios[matchingKey]) {
+                    bioText = authorBios[matchingKey].bio || "No bio provided.";
+                    picUrl = authorBios[matchingKey].picture || "";
+                    fbUrl = authorBios[matchingKey].facebookUrl || "";
+                }
             }
+
             pubBio.innerText = bioText;
 
-            if(picUrl) {
+            if (pubSocial) {
+                if (fbUrl) {
+                    pubSocial.innerHTML = `<a href="${fbUrl}" target="_blank" style="color: #38bdf8; text-decoration: none;"><i class="fa-brands fa-facebook"></i> Author Facebook Page</a>`;
+                } else {
+                    pubSocial.innerHTML = '';
+                }
+            }
+
+            if (picUrl) {
                 pubPic.innerHTML = `<img src="${picUrl}">`;
             } else {
                 pubPic.innerHTML = `<span>${authorName.substring(0, 2).toUpperCase()}</span>`;
             }
 
-            const authorBooks = novels.filter(n => n.author.trim().toLowerCase() === authorName.trim().toLowerCase());
+            const authorBooks = novels.filter(n => (n.author || "").trim().toLowerCase() === targetAuthor);
             renderGrid(authorBooks, 'publicAuthorBooksGrid');
             switchView('authorPublicView');
         }
@@ -1116,7 +1162,7 @@
 
             const container = document.getElementById('detailContainer');
             const isBookmarked = savedBookmarks.includes(id);
-            const isAuthor = (currentNovel.author.trim().toLowerCase() === userProfile.name.trim().toLowerCase());
+            const isAuthor = ((currentNovel.author || "").trim().toLowerCase() === (userProfile.name || "").trim().toLowerCase());
 
             const commentsHtml = (currentNovel.comments || []).map(c => `
                 <div style="background: var(--bg-card, #1e1e2f); border: 1px solid var(--border-color, #2a2a40); border-radius: 8px; padding: 12px 15px; margin-bottom: 10px;">
@@ -1301,7 +1347,11 @@
 
         function renderProfileBooks() {
             updateProfileUI();
-            const myBooks = novels.filter(n => n.author.trim().toLowerCase() === userProfile.name.trim().toLowerCase());
+            const currentName = (userProfile.name || "").trim().toLowerCase();
+            const myBooks = novels.filter(n => {
+                const bookAuthor = (n.author || "").trim().toLowerCase();
+                return bookAuthor === currentName || (currentName !== "" && bookAuthor === "author name");
+            });
             renderGrid(myBooks, 'myPublishedGrid');
         }
 
