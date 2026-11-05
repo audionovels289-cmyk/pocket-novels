@@ -562,7 +562,10 @@
               snapshot.forEach(doc => {
                 cloudNovels.push({ id: doc.id, ...doc.data() });
               });
-              novels = cloudNovels;
+              // Combine samples and cloud novels so sample stories are always available
+              const cloudIds = cloudNovels.map(n => String(n.id));
+              const missingSamples = defaultSampleNovels.filter(s => !cloudIds.includes(String(s.id)));
+              novels = [...cloudNovels, ...missingSamples];
             } else {
               novels = defaultSampleNovels;
             }
@@ -849,6 +852,16 @@
             const isBookmarked = savedBookmarks.includes(id);
             const isAuthor = currentUser && (currentNovel.author || "").trim().toLowerCase() === (userProfile.name || "").trim().toLowerCase();
 
+            const commentsHtml = (currentNovel.comments || []).map(c => `
+                <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 15px; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <strong style="font-size: 0.9rem; color: var(--primary-light);">${c.author || 'Reader'}</strong>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">${c.date || ''}</span>
+                    </div>
+                    <p style="font-size: 0.9rem; color: var(--text-main); margin: 0; line-height: 1.4;">${c.text}</p>
+                </div>
+            `).join('') || '<p style="color: var(--text-muted); font-size: 0.85rem;">No comments yet. Be the first to comment!</p>';
+
             container.innerHTML = `
                 <h2>${currentNovel.title}</h2>
                 <p style="margin-bottom: 0.5rem;">By <span style="color: var(--primary-light); cursor: pointer; text-decoration: underline;" onclick="openAuthorProfile('${currentNovel.author}')">${currentNovel.author}</span> • <span style="background: rgba(99,102,241,0.2); padding: 2px 8px; border-radius: 4px;">${currentNovel.genre}</span></p>
@@ -862,15 +875,56 @@
                 </div>
 
                 <h3>Chapters (${currentNovel.chapters.length})</h3>
-                <div style="margin-top: 10px;">
+                <div style="margin-top: 10px; margin-bottom: 2rem;">
                     ${currentNovel.chapters.map((ch, idx) => `
                         <div style="background: var(--bg-card); padding: 12px; border-radius: 8px; margin-bottom: 8px; cursor: pointer;" onclick="startReading(${idx})">
                             ${ch.title}
                         </div>
                     `).join('')}
                 </div>
+
+                <div class="comments-section" style="margin-top: 2rem;">
+                    <h3><i class="fa-solid fa-comments"></i> Reader Comments (${(currentNovel.comments || []).length})</h3>
+                    <form onsubmit="handleAddComment(event)" style="margin: 1rem 0;">
+                        <div class="form-group" style="margin-bottom: 0.8rem;">
+                            <input type="text" id="commentTextInput" class="form-control" placeholder="Write a comment as reader..." required>
+                        </div>
+                        <button type="submit" class="btn btn-secondary" style="padding: 6px 16px; font-size: 0.85rem;"><i class="fa-solid fa-paper-plane"></i> Post Comment</button>
+                    </form>
+                    <div id="commentsContainer">${commentsHtml}</div>
+                </div>
             `;
             switchView('detailView');
+        }
+
+        async function handleAddComment(e) {
+            e.preventDefault();
+            const textInput = document.getElementById('commentTextInput');
+            if(!textInput.value.trim()) return;
+
+            const commenterName = userProfile.name ? userProfile.name : "Guest Reader";
+            if(!currentNovel.comments) currentNovel.comments = [];
+            currentNovel.comments.unshift({
+                author: commenterName,
+                text: textInput.value.trim(),
+                date: new Date().toLocaleDateString()
+            });
+
+            const idx = novels.findIndex(n => n.id == currentNovel.id);
+            if(idx !== -1) novels[idx] = currentNovel;
+            saveToStorage();
+
+            // Sync comments update to cloud
+            try {
+                await db.collection("publicNovels").doc(String(currentNovel.id)).update({
+                    comments: currentNovel.comments
+                });
+            } catch (err) {
+                console.log("Cloud comment sync error:", err);
+            }
+
+            showToast("Comment posted!", "fa-circle-check");
+            openNovelDetail(currentNovel.id);
         }
 
         async function handlePublishNovel(e) {
