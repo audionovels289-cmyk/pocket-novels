@@ -513,6 +513,15 @@
               novels = cloudNovels;
               localStorage.setItem('pocket_novels', JSON.stringify(novels));
             }
+
+            const authorsSnapshot = await db.collection("authorsDirectory").get();
+            if (!authorsSnapshot.empty) {
+              authorsSnapshot.forEach(doc => {
+                authorBios[doc.id] = doc.data();
+              });
+              localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
+            }
+
             if (typeof renderLibrary === 'function') renderLibrary();
             if (typeof applyFilters === 'function') applyFilters();
           } catch (error) {
@@ -704,8 +713,12 @@
 
             if (currentUser) {
                 await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
-                
-                // Update all novels by this author in Firestore so readers instantly see new bio/pic
+                await db.collection("authorsDirectory").doc(userProfile.name).set({
+                    bio: userProfile.bio,
+                    picture: userProfile.picture,
+                    facebookUrl: userProfile.facebookUrl
+                }, { merge: true });
+
                 const snapshot = await db.collection("publicNovels").where("author", "==", userProfile.name).get();
                 const batch = db.batch();
                 snapshot.forEach(docSnap => {
@@ -783,17 +796,31 @@
             `).join('');
         }
 
-        function openAuthorProfile(novelId) {
+        async function openAuthorProfile(novelId) {
             const novel = novels.find(n => n.id == novelId);
             if (!novel) return;
 
             const authorName = novel.author || "Unknown Author";
-            const bioText = novel.authorBio || authorBios[authorName]?.bio || "Author on Pocket Novels.";
-            const picUrl = novel.authorPic || authorBios[authorName]?.picture || "";
-            const fbUrl = novel.authorFb || authorBios[authorName]?.facebookUrl || "";
+            
+            // Fallback lookup: Check novel fields, then local/cloud author directory
+            let bioText = novel.authorBio || authorBios[authorName]?.bio || "";
+            let picUrl = novel.authorPic || authorBios[authorName]?.picture || "";
+            let fbUrl = novel.authorFb || authorBios[authorName]?.facebookUrl || "";
+
+            if (!bioText && !picUrl) {
+                try {
+                    const doc = await db.collection("authorsDirectory").doc(authorName).get();
+                    if (doc.exists) {
+                        const d = doc.data();
+                        bioText = d.bio || "";
+                        picUrl = d.picture || "";
+                        fbUrl = d.facebookUrl || "";
+                    }
+                } catch(e) { console.log(e); }
+            }
 
             document.getElementById('publicAuthorName').innerText = authorName;
-            document.getElementById('publicAuthorBio').innerText = bioText;
+            document.getElementById('publicAuthorBio').innerText = bioText || "Author on Pocket Novels.";
             
             const picContainer = document.getElementById('publicAuthorPic');
             if (picUrl) {
@@ -822,9 +849,14 @@
             saveToStorage();
 
             try {
-                await db.collection("publicNovels").doc(String(id)).update({
-                    views: currentNovel.views
-                });
+                // If viewing own novel and profile is updated, auto-repair/sync profile info into cloud
+                let updatePayload = { views: currentNovel.views };
+                if (currentUser && (currentNovel.author || "").trim().toLowerCase() === (userProfile.name || "").trim().toLowerCase()) {
+                    if (userProfile.bio) updatePayload.authorBio = userProfile.bio;
+                    if (userProfile.picture) updatePayload.authorPic = userProfile.picture;
+                    if (userProfile.facebookUrl) updatePayload.authorFb = userProfile.facebookUrl;
+                }
+                await db.collection("publicNovels").doc(String(id)).update(updatePayload);
             } catch (err) {
                 console.log("Cloud view sync error:", err);
             }
