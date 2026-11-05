@@ -142,6 +142,17 @@
         .auth-action-btn.secondary { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
         .auth-action-btn.secondary:hover { background: #30363d; }
 
+        /* Custom In-App Theme Toast Notification */
+        #appToast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
+            background: #1e293b; color: #f8fafc; border: 1px solid var(--primary-light);
+            padding: 12px 24px; border-radius: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            font-weight: 600; font-size: 0.9rem; z-index: 10000; transition: transform 0.3s ease, opacity 0.3s ease;
+            opacity: 0; display: flex; align-items: center; gap: 10px; pointer-events: none;
+        }
+        #appToast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        #appToast i { color: var(--primary-light); font-size: 1.1rem; }
+
         /* Modern Wattpad-style Compact Novel Grid */
         #novelGrid, #libraryGrid, .novels-grid, .novel-list, #myPublishedGrid, #publicAuthorBooksGrid {
             display: grid !important;
@@ -194,6 +205,9 @@
     </script>
 </head>
 <body>
+
+    <!-- Custom In-App Toast Popup Element -->
+    <div id="appToast"><i class="fa-solid fa-circle-info" id="toastIcon"></i><span id="toastMessage">Notification message</span></div>
 
     <header>
         <div class="logo" onclick="switchView('exploreView', true)">
@@ -464,9 +478,25 @@
     </div>
 
     <script>
+        // Custom Theme Toast Notification Replacement for Alerts
+        function showToast(message, iconClass = "fa-circle-info") {
+            const toast = document.getElementById('appToast');
+            const msgEl = document.getElementById('toastMessage');
+            const iconEl = document.getElementById('toastIcon');
+            
+            if(!toast) return;
+            msgEl.innerText = message;
+            iconEl.className = "fa-solid " + iconClass;
+            
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3500);
+        }
+
         const defaultSampleNovels = [
             {
-                id: 1700000001001,
+                id: "1700000001001",
                 title: "The Mystery of the Clockwork Manor",
                 author: "Arthur Vance",
                 genre: "Mystery",
@@ -486,7 +516,7 @@
                 ]
             },
             {
-                id: 1700000001002,
+                id: "1700000001002",
                 title: "Echoes of the Forgotten Kingdom",
                 author: "Elena Rostova",
                 genre: "Fantasy",
@@ -504,7 +534,7 @@
                 ]
             },
             {
-                id: 1700000001003,
+                id: "1700000001003",
                 title: "A Summer in Kyoto",
                 author: "Kenji Sato",
                 genre: "Romance",
@@ -522,7 +552,7 @@
                 ]
             },
             {
-                id: 1700000001004,
+                id: "1700000001004",
                 title: "شام کا مسافر (The Evening Traveler)",
                 author: "احمد رضا (Ahmed Raza)",
                 genre: "Romance",
@@ -540,7 +570,7 @@
                 ]
             },
             {
-                id: 1700000001005,
+                id: "1700000001005",
                 title: "خوابوں کی بستی (City of Dreams)",
                 author: "فاطمہ خان (Fatima Khan)",
                 genre: "Fantasy",
@@ -579,7 +609,6 @@
         let currentFontSize = 18;
         let currentUser = null;
 
-        // FORCE CLOUD FETCH FIRST: Always pull live public novels from Firestore so readers see updates instantly
         async function initCloudData() {
           try {
             const snapshot = await db.collection("publicNovels").get();
@@ -681,7 +710,7 @@
           const email = document.getElementById('authEmailInput').value.trim();
           const password = document.getElementById('authPasswordInput').value;
           if (!email || !password) {
-            alert("Please enter both email and password.");
+            showToast("Please enter email and password.", "fa-triangle-exclamation");
             return;
           }
           signInWithEmail(email, password);
@@ -692,7 +721,7 @@
           const email = document.getElementById('authEmailInput').value.trim();
           const password = document.getElementById('authPasswordInput').value;
           if (!email || !password) {
-            alert("Please enter both email and password.");
+            showToast("Please enter email and password.", "fa-triangle-exclamation");
             return;
           }
           signUpWithEmail(email, password);
@@ -719,30 +748,30 @@
                     return db.collection("users").doc(user.uid).set(userData, { merge: true });
                 })
                 .then(() => {
-                    console.log("Profile synced with Google!");
+                    showToast("Successfully signed in with Google!", "fa-circle-check");
                     updateProfileUI();
                     closeAuthModal();
                 })
-                .catch((error) => console.error("Google Auth error:", error.message));
+                .catch((error) => showToast("Google Auth error: " + error.message, "fa-triangle-exclamation"));
         }
 
         function signInWithEmail(email, password) {
           firebase.auth().signInWithEmailAndPassword(email, password)
             .then((userCredential) => {
-              console.log("Logged in with email:", userCredential.user.email);
+              showToast("Signed in successfully!", "fa-circle-check");
             })
             .catch((error) => {
-              alert("Sign-in error: " + error.message);
+              showToast("Sign-in error: " + error.message, "fa-triangle-exclamation");
             });
         }
 
         function signUpWithEmail(email, password) {
           firebase.auth().createUserWithEmailAndPassword(email, password)
             .then((userCredential) => {
-              console.log("Account created & logged in:", userCredential.user.email);
+              showToast("Account created successfully!", "fa-circle-check");
             })
             .catch((error) => {
-              alert("Sign-up error: " + error.message);
+              showToast("Sign-up error: " + error.message, "fa-triangle-exclamation");
             });
         }
 
@@ -752,9 +781,9 @@
                 localStorage.removeItem('pocket_user_profile');
                 userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
                 updateProfileUI();
-                console.log("User signed out!");
+                showToast("Signed out successfully.", "fa-circle-info");
             })
-            .catch((error) => console.error("Sign-out error:", error.message));
+            .catch((error) => console.log("Sign out error:", error));
         }
 
         async function saveUserProfileToCloud(profileData) {
@@ -767,7 +796,6 @@
               picture: profileData.picture || "",
               lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
-            console.log("Complete profile successfully saved to cloud!");
           } catch (error) {
             console.error("Error saving profile to cloud:", error);
           }
@@ -883,7 +911,7 @@
 
         function toggleEditProfile() {
             if (!currentUser) {
-                alert("Please sign in first to edit your author profile.");
+                showToast("Please sign in first to edit your profile.", "fa-triangle-exclamation");
                 const modal = document.getElementById('authModal');
                 if (modal) modal.style.display = 'flex';
                 return;
@@ -905,10 +933,26 @@
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    uploadedProfilePicUrl = e.target.result;
-                    const preview = document.getElementById('profilePicPreview');
-                    preview.src = uploadedProfilePicUrl;
-                    preview.style.display = 'block';
+                    // Compress image via canvas to prevent size overload
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const MAX_WIDTH = 300;
+                        const MAX_HEIGHT = 300;
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } }
+                        else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        uploadedProfilePicUrl = canvas.toDataURL('image/jpeg', 0.7);
+                        const preview = document.getElementById('profilePicPreview');
+                        preview.src = uploadedProfilePicUrl;
+                        preview.style.display = 'block';
+                    }
                 };
                 reader.readAsDataURL(file);
             }
@@ -916,7 +960,6 @@
 
         async function handleSaveProfile(e) {
             e.preventDefault();
-            const oldName = userProfile.name;
             userProfile.name = document.getElementById('editNameInput').value.trim();
             userProfile.bio = document.getElementById('editBioInput').value;
             userProfile.facebookUrl = document.getElementById('editSocialInput').value.trim();
@@ -939,7 +982,7 @@
                 picture: userProfile.picture
             });
 
-            alert("Profile updated successfully!");
+            showToast("Profile updated successfully!", "fa-circle-check");
             renderProfileBooks();
         }
 
@@ -1023,10 +1066,26 @@
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    uploadedCoverDataUrl = e.target.result;
-                    const preview = document.getElementById('coverPreview');
-                    preview.src = uploadedCoverDataUrl;
-                    preview.style.display = 'block';
+                    // Compress cover image to ensure smooth Firestore upload
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const MAX_WIDTH = 500;
+                        const MAX_HEIGHT = 700;
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } }
+                        else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        uploadedCoverDataUrl = canvas.toDataURL('image/jpeg', 0.75);
+                        const preview = document.getElementById('coverPreview');
+                        preview.src = uploadedCoverDataUrl;
+                        preview.style.display = 'block';
+                    }
                 };
                 reader.readAsDataURL(file);
             }
@@ -1180,7 +1239,7 @@
                     url: window.location.href
                 }).catch(() => {});
             } else {
-                alert(`Link copied for "${title}"!`);
+                showToast(`Link copied for "${title}"!`, "fa-share-nodes");
             }
         }
 
@@ -1206,7 +1265,7 @@
                 savedBookmarks = savedBookmarks.filter(bId => bId != id);
                 saveToStorage();
                 db.collection("publicNovels").doc(String(id)).delete().catch(err => console.log(err));
-                alert("Novel deleted.");
+                showToast("Novel deleted successfully.", "fa-trash");
                 switchView('profileView', true);
             }
         }
@@ -1214,11 +1273,18 @@
         async function handlePublishNovel(e) {
             e.preventDefault();
             if (!currentUser) {
-                alert("Please sign in before publishing stories.");
+                showToast("Please sign in before publishing stories.", "fa-triangle-exclamation");
                 const modal = document.getElementById('authModal');
                 if (modal) modal.style.display = 'flex';
                 return;
             }
+
+            if (!uploadedCoverDataUrl) {
+                showToast("Please select a book cover image.", "fa-triangle-exclamation");
+                return;
+            }
+
+            showToast("Publishing novel to cloud...", "fa-cloud-arrow-up");
 
             const novelId = Date.now().toString();
             const newNovel = {
@@ -1244,13 +1310,14 @@
                 await db.collection("publicNovels").doc(novelId).set(newNovel);
                 novels.unshift(newNovel);
                 saveToStorage();
-                alert("Novel published successfully to Explore feed!");
+                showToast("Novel published successfully to Explore feed!", "fa-circle-check");
                 document.getElementById('publishForm').reset();
                 document.getElementById('coverPreview').style.display = 'none';
+                uploadedCoverDataUrl = "";
                 switchView('profileView', true);
             } catch (error) {
                 console.error("Error publishing novel:", error);
-                alert("Failed to publish novel. Please check your internet connection.");
+                showToast("Failed to publish novel. Storage or network error.", "fa-triangle-exclamation");
             }
         }
 
@@ -1279,7 +1346,7 @@
             closeAddChapterModal();
             document.getElementById('newChapTitle').value = '';
             document.getElementById('newChapContent').value = '';
-            alert("Chapter added!");
+            showToast("Chapter added successfully!", "fa-circle-check");
             openNovelDetail(currentNovel.id);
         }
 
@@ -1316,8 +1383,13 @@
         function prevChapter() { if(currentChapterIdx > 0) { currentChapterIdx--; readingProgress.chapterIdx = currentChapterIdx; saveToStorage(); updateReader(); } }
 
         function toggleBookmark(id) {
-            if(savedBookmarks.includes(id)) savedBookmarks = savedBookmarks.filter(b => b != id);
-            else savedBookmarks.push(id);
+            if(savedBookmarks.includes(id)) {
+                savedBookmarks = savedBookmarks.filter(b => b != id);
+                showToast("Removed from library.", "fa-bookmark");
+            } else {
+                savedBookmarks.push(id);
+                showToast("Added to library!", "fa-bookmark");
+            }
             saveToStorage();
             updateProfileUI();
             openNovelDetail(id);
