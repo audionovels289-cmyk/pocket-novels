@@ -308,8 +308,8 @@
             <div class="profile-card">
                 <div class="profile-pic" id="profilePicContainer"><span>ME</span></div>
                 <div class="profile-details">
-                    <div class="profile-name" id="profileNameDisplay">Author Name</div>
-                    <div class="profile-bio" id="profileBioDisplay">No bio added yet.</div>
+                    <div class="profile-name" id="profileNameDisplay">Guest User</div>
+                    <div class="profile-bio" id="profileBioDisplay">Sign in to create your author profile.</div>
                     <div class="profile-social" id="profileSocialDisplay" style="margin-top: 6px;"></div>
                     <p style="color: var(--primary-light); font-size: 0.85rem; margin-bottom: 10px;" id="profileBookmarkStats"><i class="fa-solid fa-bookmark"></i> 0 Bookmarked Novels</p>
                     <button class="btn btn-secondary" onclick="toggleEditProfile()"><i class="fa-solid fa-user-pen"></i> Edit Profile</button>
@@ -564,21 +564,28 @@
           ? JSON.parse(savedNovels) 
           : defaultSampleNovels;
 
+        // PUBLIC FIRESTORE SYNC: Load global public novels from Firestore
         async function initCloudData() {
-          const cloudNovels = await loadNovelsFromCloud();
-          if (cloudNovels && Array.isArray(cloudNovels) && cloudNovels.length > 0) {
-            novels = cloudNovels;
-            localStorage.setItem('pocket_novels', JSON.stringify(novels));
-          } else {
-            const localNovels = JSON.parse(localStorage.getItem('pocket_novels'));
-            if (localNovels && localNovels.length > 0) {
-              novels = localNovels;
-            } else if (typeof defaultSampleNovels !== 'undefined' && defaultSampleNovels.length > 0) {
+          try {
+            const snapshot = await db.collection("publicNovels").orderBy("createdAt", "desc").get();
+            if (!snapshot.empty) {
+              const cloudNovels = [];
+              snapshot.forEach(doc => {
+                cloudNovels.push({ id: doc.id, ...doc.data() });
+              });
+              novels = cloudNovels;
+            } else {
+              // If public collection is empty, seed with defaults
               novels = defaultSampleNovels;
-              localStorage.setItem('pocket_novels', JSON.stringify(novels));
             }
+            localStorage.setItem('pocket_novels', JSON.stringify(novels));
+          } catch (error) {
+            console.error("Error loading public novels:", error);
+            const localNovels = JSON.parse(localStorage.getItem('pocket_novels'));
+            if (localNovels && localNovels.length > 0) novels = localNovels;
           }
           if (typeof renderLibrary === 'function') renderLibrary();
+          if (typeof applyFilters === 'function') applyFilters();
         }
 
         initCloudData();
@@ -587,9 +594,10 @@
         let authorBios = JSON.parse(localStorage.getItem('pocket_author_bios')) || {};
         let readingProgress = JSON.parse(localStorage.getItem('pocket_reading_progress')) || null;
         
+        // Clean default guest state (no hardcoded names)
         let userProfile = JSON.parse(localStorage.getItem('pocket_user_profile')) || {
-            name: "Author Name",
-            bio: "Tap Edit Profile to write your author bio and add a picture!",
+            name: "",
+            bio: "",
             picture: "",
             facebookUrl: ""
         };
@@ -607,14 +615,12 @@
             localStorage.setItem('pocket_novels', JSON.stringify(novels));
           }
           localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks));
-          authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl };
-          localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
-          localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
-          if (readingProgress) localStorage.setItem('pocket_reading_progress', JSON.stringify(readingProgress));
-          
-          if (currentUser) {
-            saveNovelsToCloud(novels);
+          if (userProfile.name) {
+              authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl };
+              localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
+              localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
           }
+          if (readingProgress) localStorage.setItem('pocket_reading_progress', JSON.stringify(readingProgress));
         }
 
         firebase.auth().onAuthStateChanged(async (user) => {
@@ -627,14 +633,14 @@
 
                 try {
                     const data = await loadUserProfileFromCloud();
-                    if (data) {
-                        userProfile.name = data.name || user.displayName || "Ujala Naz";
+                    if (data && data.name) {
+                        userProfile.name = data.name;
                         userProfile.email = user.email || "";
                         userProfile.bio = data.bio || "";
                         userProfile.picture = data.picture || user.photoURL || "";
                         userProfile.facebookUrl = data.facebookUrl || "";
                     } else {
-                        userProfile.name = user.displayName || "Ujala Naz";
+                        userProfile.name = user.displayName || user.email.split('@')[0];
                         userProfile.email = user.email || "";
                         userProfile.picture = user.photoURL || "";
                         userProfile.bio = "";
@@ -642,7 +648,7 @@
                     }
                 } catch (err) {
                     console.error("Error loading user profile from Firestore:", err);
-                    userProfile.name = user.displayName || "Ujala Naz";
+                    userProfile.name = user.displayName || "Anonymous Author";
                     userProfile.picture = user.photoURL || "";
                 }
 
@@ -651,13 +657,6 @@
                 localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
 
                 updateProfileUI();
-
-                await syncLocalNovelsToCloud();
-                const cloudNovels = await loadNovelsFromCloud();
-                if (cloudNovels) {
-                    novels = cloudNovels;
-                    localStorage.setItem('pocket_novels', JSON.stringify(novels));
-                }
                 if (typeof renderLibrary === 'function') renderLibrary();
                 renderProfileBooks();
 
@@ -711,7 +710,7 @@
             firebase.auth().signInWithPopup(provider)
                 .then((result) => {
                     const user = result.user;
-                    userProfile.name = user.displayName || "Ujala Naz";
+                    userProfile.name = user.displayName || user.email.split('@')[0];
                     userProfile.email = user.email || "";
                     userProfile.picture = user.photoURL || "";
 
@@ -755,35 +754,13 @@
 
         function signOutUser() {
           firebase.auth().signOut()
-            .then(() => console.log("User signed out!"))
+            .then(() => {
+                localStorage.removeItem('pocket_user_profile');
+                userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
+                updateProfileUI();
+                console.log("User signed out!");
+            })
             .catch((error) => console.error("Sign-out error:", error.message));
-        }
-
-        async function saveNovelsToCloud(novelsData) {
-          try {
-            if (!currentUser) return;
-            await db.collection("users").doc(currentUser.uid).collection("appData").doc("userNovels").set({
-              novels: novelsData,
-              lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            console.log("User library saved to cloud!");
-          } catch (error) {
-            console.error("Error saving user library: ", error);
-          }
-        }
-
-        async function loadNovelsFromCloud() {
-          try {
-            if (!currentUser) return null;
-            const doc = await db.collection("users").doc(currentUser.uid).collection("appData").doc("userNovels").get();
-            if (doc.exists) {
-              return doc.data().novels;
-            }
-            return null;
-          } catch (error) {
-            console.error("Error loading from Firestore: ", error);
-            return null;
-          }
         }
 
         async function saveUserProfileToCloud(profileData) {
@@ -816,38 +793,24 @@
           }
         }
 
-        async function syncLocalNovelsToCloud() {
-          if (!currentUser) return;
-          const localData = localStorage.getItem('pocket_novels');
-          if (localData) {
-            try {
-              const parsedNovels = JSON.parse(localData);
-              if (Array.isArray(parsedNovels) && parsedNovels.length > 0) {
-                await db.collection("users").doc(currentUser.uid).collection("appData").doc("userNovels").set({
-                  novels: parsedNovels,
-                  lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                console.log("Local novels successfully synced to cloud!");
-              }
-            } catch (error) {
-              console.error("Error syncing local novels to cloud:", error);
-            }
-          }
-        }
-
         function updateProfileUI() {
             const nameEl = document.getElementById('profileNameDisplay');
             const bioEl = document.getElementById('profileBioDisplay');
             const socialEl = document.getElementById('profileSocialDisplay');
 
-            if (nameEl) nameEl.innerText = userProfile.name || "Ujala Naz";
-            if (bioEl) bioEl.innerText = userProfile.bio || "No bio added yet.";
-
-            if (socialEl) {
-                if (userProfile.facebookUrl) {
-                    socialEl.innerHTML = `<a href="${userProfile.facebookUrl}" target="_blank" style="color: #38bdf8; text-decoration: none;"><i class="fa-brands fa-facebook"></i> Author Facebook Page</a>`;
-                } else {
-                    socialEl.innerHTML = '';
+            if (!userProfile.name) {
+                if (nameEl) nameEl.innerText = "Guest User";
+                if (bioEl) bioEl.innerText = "Please sign in to publish stories and customize your author profile.";
+                if (socialEl) socialEl.innerHTML = '';
+            } else {
+                if (nameEl) nameEl.innerText = userProfile.name;
+                if (bioEl) bioEl.innerText = userProfile.bio || "No bio added yet.";
+                if (socialEl) {
+                    if (userProfile.facebookUrl) {
+                        socialEl.innerHTML = `<a href="${userProfile.facebookUrl}" target="_blank" style="color: #38bdf8; text-decoration: none;"><i class="fa-brands fa-facebook"></i> Author Facebook Page</a>`;
+                    } else {
+                        socialEl.innerHTML = '';
+                    }
                 }
             }
 
@@ -861,7 +824,7 @@
                 if (picContainer) picContainer.innerHTML = `<img src="${userProfile.picture}">`;
                 if (headerAvatar) headerAvatar.innerHTML = `<img src="${userProfile.picture}">`;
             } else {
-                const initials = (userProfile.name || "UN").substring(0, 2).toUpperCase();
+                const initials = (userProfile.name || "G").substring(0, 2).toUpperCase();
                 if (picContainer) picContainer.innerHTML = `<span>${initials}</span>`;
                 if (headerAvatar) headerAvatar.innerHTML = `<span>${initials}</span>`;
             }
@@ -925,11 +888,17 @@
         }
 
         function toggleEditProfile() {
+            if (!currentUser) {
+                alert("Please sign in first to edit your author profile.");
+                const modal = document.getElementById('authModal');
+                if (modal) modal.style.display = 'flex';
+                return;
+            }
             const card = document.getElementById('editProfileCard');
             const isOpening = card.style.display === 'none' || card.style.display === '';
             
             if (isOpening) {
-                document.getElementById('editNameInput').value = userProfile.name || "Ujala Naz";
+                document.getElementById('editNameInput').value = userProfile.name || "";
                 document.getElementById('editBioInput').value = userProfile.bio || "";
                 document.getElementById('editSocialInput').value = userProfile.facebookUrl || "";
             }
@@ -964,13 +933,6 @@
                 picture: userProfile.picture, 
                 facebookUrl: userProfile.facebookUrl 
             };
-
-            novels.forEach(n => {
-                const aName = (n.author || "").trim().toLowerCase();
-                if (aName === oldName.trim().toLowerCase() || aName === "author name" || aName === "ujala naz") {
-                    n.author = userProfile.name;
-                }
-            });
 
             saveToStorage();
             updateProfileUI();
@@ -1087,8 +1049,8 @@
                 <div class="novel-card">
                     <span class="lang-badge">${n.language || 'English'}</span>
                     <span class="genre-badge">${n.genre || 'General'}</span>
-                    <img class="novel-cover" src="${n.cover}" onclick="openNovelDetail(${n.id})">
-                    <div class="novel-info" onclick="openNovelDetail(${n.id})">
+                    <img class="novel-cover" src="${n.cover}" onclick="openNovelDetail('${n.id}')">
+                    <div class="novel-info" onclick="openNovelDetail('${n.id}')">
                         <div class="novel-title">${n.title}</div>
                     </div>
                     <div style="padding: 0 0.95rem 0.95rem 0.95rem;">
@@ -1117,7 +1079,7 @@
             const targetAuthor = authorName.trim().toLowerCase();
             const myAuthorName = (userProfile.name || "").trim().toLowerCase();
 
-            if (targetAuthor === myAuthorName || targetAuthor === "ujala naz") {
+            if (targetAuthor === myAuthorName) {
                 bioText = userProfile.bio || "No bio provided.";
                 picUrl = userProfile.picture || "";
                 fbUrl = userProfile.facebookUrl || "";
@@ -1150,22 +1112,20 @@
                 pubPic.innerHTML = `<span>${authorName.substring(0, 2).toUpperCase()}</span>`;
             }
 
-            const authorBooks = novels.filter(n => {
-                const a = (n.author || "").trim().toLowerCase();
-                return a === targetAuthor || (targetAuthor === "ujala naz" && (a === "ujala naz" || a === "author name"));
-            });
+            const authorBooks = novels.filter(n => (n.author || "").trim().toLowerCase() === targetAuthor);
             renderGrid(authorBooks, 'publicAuthorBooksGrid');
             switchView('authorPublicView');
         }
 
         function openNovelDetail(id) {
-            currentNovel = novels.find(n => n.id === id);
+            currentNovel = novels.find(n => n.id == id);
+            if (!currentNovel) return;
             currentNovel.views = (currentNovel.views || 0) + 1;
             saveToStorage();
 
             const container = document.getElementById('detailContainer');
             const isBookmarked = savedBookmarks.includes(id);
-            const isAuthor = true; // Allow instant author management for owner
+            const isAuthor = currentUser && (currentNovel.author || "").trim().toLowerCase() === (userProfile.name || "").trim().toLowerCase();
 
             const commentsHtml = (currentNovel.comments || []).map(c => `
                 <div style="background: var(--bg-card, #1e1e2f); border: 1px solid var(--border-color, #2a2a40); border-radius: 8px; padding: 12px 15px; margin-bottom: 10px;">
@@ -1187,11 +1147,11 @@
                 
                 <div style="display: flex; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap;">
                     <button class="btn" onclick="startReading(0)"><i class="fa-solid fa-book-open"></i> Read</button>
-                    <button class="btn btn-secondary" onclick="toggleBookmark(${currentNovel.id})"><i class="fa-solid fa-bookmark"></i> ${isBookmarked ? 'Bookmarked' : 'Bookmark'}</button>
+                    <button class="btn btn-secondary" onclick="toggleBookmark('${currentNovel.id}')"><i class="fa-solid fa-bookmark"></i> ${isBookmarked ? 'Bookmarked' : 'Bookmark'}</button>
                     <button class="btn btn-secondary" onclick="shareNovel('${currentNovel.title}')"><i class="fa-solid fa-share-nodes"></i> Share</button>
                     ${isAuthor ? `
                         <button class="btn btn-success" onclick="openAddChapterModal()"><i class="fa-solid fa-plus"></i> Add Chapter</button>
-                        <button class="btn btn-danger" onclick="deleteNovel(${currentNovel.id})"><i class="fa-solid fa-trash"></i> Delete</button>
+                        <button class="btn btn-danger" onclick="deleteNovel('${currentNovel.id}')"><i class="fa-solid fa-trash"></i> Delete</button>
                     ` : ''}
                 </div>
 
@@ -1240,7 +1200,7 @@
                 text: textInput.value.trim(),
                 date: new Date().toLocaleDateString()
             });
-            const idx = novels.findIndex(n => n.id === currentNovel.id);
+            const idx = novels.findIndex(n => n.id == currentNovel.id);
             if(idx !== -1) novels[idx] = currentNovel;
             saveToStorage();
             openNovelDetail(currentNovel.id);
@@ -1248,20 +1208,30 @@
 
         function deleteNovel(id) {
             if(confirm("Are you sure you want to delete this novel?")) {
-                novels = novels.filter(n => n.id !== id);
-                savedBookmarks = savedBookmarks.filter(bId => bId !== id);
+                novels = novels.filter(n => n.id != id);
+                savedBookmarks = savedBookmarks.filter(bId => bId != id);
                 saveToStorage();
+                db.collection("publicNovels").doc(String(id)).delete().catch(err => console.log(err));
                 alert("Novel deleted.");
                 switchView('profileView', true);
             }
         }
 
-        function handlePublishNovel(e) {
+        // PUBLISH TO PUBLIC FIRESTORE COLLECTION (WATTPAD STYLE)
+        async function handlePublishNovel(e) {
             e.preventDefault();
+            if (!currentUser) {
+                alert("Please sign in before publishing stories.");
+                const modal = document.getElementById('authModal');
+                if (modal) modal.style.display = 'flex';
+                return;
+            }
+
+            const novelId = Date.now().toString();
             const newNovel = {
-                id: Date.now(),
+                id: novelId,
                 title: document.getElementById('pubTitle').value,
-                author: userProfile.name || "Ujala Naz",
+                author: userProfile.name || currentUser.displayName || "Author",
                 genre: document.getElementById('pubGenre').value,
                 language: document.getElementById('pubLanguage').value,
                 alignment: document.getElementById('pubAlignment').value,
@@ -1273,29 +1243,47 @@
                     number: 1,
                     title: document.getElementById('pubEpTitle').value,
                     content: document.getElementById('pubEpContent').value
-                }]
+                }],
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
-            novels.unshift(newNovel);
-            saveToStorage();
-            alert("Novel published successfully!");
-            document.getElementById('publishForm').reset();
-            document.getElementById('coverPreview').style.display = 'none';
-            switchView('profileView', true);
+
+            try {
+                // Save globally so all readers can see it
+                await db.collection("publicNovels").doc(novelId).set(newNovel);
+                novels.unshift(newNovel);
+                saveToStorage();
+                alert("Novel published successfully to Explore feed!");
+                document.getElementById('publishForm').reset();
+                document.getElementById('coverPreview').style.display = 'none';
+                switchView('profileView', true);
+            } catch (error) {
+                console.error("Error publishing novel:", error);
+                alert("Failed to publish novel. Please check your internet connection.");
+            }
         }
 
         function openAddChapterModal() { document.getElementById('addChapterModal').classList.add('active'); }
         function closeAddChapterModal() { document.getElementById('addChapterModal').classList.remove('active'); }
 
-        function handleSaveNewChapter(e) {
+        async function handleSaveNewChapter(e) {
             e.preventDefault();
             currentNovel.chapters.push({
                 number: currentNovel.chapters.length + 1,
                 title: document.getElementById('newChapTitle').value,
                 content: document.getElementById('newChapContent').value
             });
-            const idx = novels.findIndex(n => n.id === currentNovel.id);
+            const idx = novels.findIndex(n => n.id == currentNovel.id);
             if(idx !== -1) novels[idx] = currentNovel;
             saveToStorage();
+
+            try {
+                await db.collection("publicNovels").doc(String(currentNovel.id)).update({
+                    chapters: currentNovel.chapters
+                });
+            } catch (err) {
+                console.log("Cloud chapter update error:", err);
+            }
+
             closeAddChapterModal();
             document.getElementById('newChapTitle').value = '';
             document.getElementById('newChapContent').value = '';
@@ -1336,7 +1324,7 @@
         function prevChapter() { if(currentChapterIdx > 0) { currentChapterIdx--; readingProgress.chapterIdx = currentChapterIdx; saveToStorage(); updateReader(); } }
 
         function toggleBookmark(id) {
-            if(savedBookmarks.includes(id)) savedBookmarks = savedBookmarks.filter(b => b !== id);
+            if(savedBookmarks.includes(id)) savedBookmarks = savedBookmarks.filter(b => b != id);
             else savedBookmarks.push(id);
             saveToStorage();
             updateProfileUI();
@@ -1350,14 +1338,12 @@
 
         function renderProfileBooks() {
             updateProfileUI();
-            const currentName = (userProfile.name || "Ujala Naz").trim().toLowerCase();
-            const myBooks = novels.filter(n => {
-                const bookAuthor = (n.author || "").trim().toLowerCase();
-                return bookAuthor === currentName || 
-                       bookAuthor === "ujala naz" || 
-                       bookAuthor === "author name" || 
-                       bookAuthor.includes("ujala");
-            });
+            if (!userProfile.name) {
+                document.getElementById('myPublishedGrid').innerHTML = `<p style="color: var(--text-muted); grid-column: 1/-1;">Sign in to view your published stories.</p>`;
+                return;
+            }
+            const currentName = userProfile.name.trim().toLowerCase();
+            const myBooks = novels.filter(n => (n.author || "").trim().toLowerCase() === currentName);
             renderGrid(myBooks, 'myPublishedGrid');
         }
 
