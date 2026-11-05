@@ -559,42 +559,11 @@
             }
         ];
 
-        let savedNovels = localStorage.getItem('pocket_novels');
-        let novels = (savedNovels && JSON.parse(savedNovels).length > 0) 
-          ? JSON.parse(savedNovels) 
-          : defaultSampleNovels;
-
-        // PUBLIC FIRESTORE SYNC: Load global public novels from Firestore
-        async function initCloudData() {
-          try {
-            const snapshot = await db.collection("publicNovels").orderBy("createdAt", "desc").get();
-            if (!snapshot.empty) {
-              const cloudNovels = [];
-              snapshot.forEach(doc => {
-                cloudNovels.push({ id: doc.id, ...doc.data() });
-              });
-              novels = cloudNovels;
-            } else {
-              // If public collection is empty, seed with defaults
-              novels = defaultSampleNovels;
-            }
-            localStorage.setItem('pocket_novels', JSON.stringify(novels));
-          } catch (error) {
-            console.error("Error loading public novels:", error);
-            const localNovels = JSON.parse(localStorage.getItem('pocket_novels'));
-            if (localNovels && localNovels.length > 0) novels = localNovels;
-          }
-          if (typeof renderLibrary === 'function') renderLibrary();
-          if (typeof applyFilters === 'function') applyFilters();
-        }
-
-        initCloudData();
-
+        let novels = [];
         let savedBookmarks = JSON.parse(localStorage.getItem('pocket_bookmarks')) || [];
         let authorBios = JSON.parse(localStorage.getItem('pocket_author_bios')) || {};
         let readingProgress = JSON.parse(localStorage.getItem('pocket_reading_progress')) || null;
         
-        // Clean default guest state (no hardcoded names)
         let userProfile = JSON.parse(localStorage.getItem('pocket_user_profile')) || {
             name: "",
             bio: "",
@@ -609,6 +578,31 @@
         let currentChapterIdx = 0;
         let currentFontSize = 18;
         let currentUser = null;
+
+        // FORCE CLOUD FETCH FIRST: Always pull live public novels from Firestore so readers see updates instantly
+        async function initCloudData() {
+          try {
+            const snapshot = await db.collection("publicNovels").get();
+            if (!snapshot.empty) {
+              const cloudNovels = [];
+              snapshot.forEach(doc => {
+                cloudNovels.push({ id: doc.id, ...doc.data() });
+              });
+              novels = cloudNovels;
+            } else {
+              novels = defaultSampleNovels;
+            }
+          } catch (error) {
+            console.error("Error loading public novels from cloud:", error);
+            const localNovels = JSON.parse(localStorage.getItem('pocket_novels'));
+            novels = (localNovels && localNovels.length > 0) ? localNovels : defaultSampleNovels;
+          }
+          localStorage.setItem('pocket_novels', JSON.stringify(novels));
+          if (typeof renderLibrary === 'function') renderLibrary();
+          if (typeof applyFilters === 'function') applyFilters();
+        }
+
+        initCloudData();
 
         function saveToStorage() {
           if (novels && novels.length > 0) {
@@ -1217,7 +1211,6 @@
             }
         }
 
-        // PUBLISH TO PUBLIC FIRESTORE COLLECTION (WATTPAD STYLE)
         async function handlePublishNovel(e) {
             e.preventDefault();
             if (!currentUser) {
@@ -1248,7 +1241,6 @@
             };
 
             try {
-                // Save globally so all readers can see it
                 await db.collection("publicNovels").doc(novelId).set(newNovel);
                 novels.unshift(newNovel);
                 saveToStorage();
