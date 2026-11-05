@@ -89,10 +89,6 @@
         .profile-name { font-size: 1.5rem; font-weight: 800; margin-bottom: 4px; }
         .profile-bio { color: var(--text-muted); font-size: 0.9rem; line-height: 1.4; margin-bottom: 10px; }
 
-        .admin-table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: var(--bg-card); border-radius: 8px; overflow: hidden; }
-        .admin-table th, .admin-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; }
-        .admin-table th { background: rgba(99, 102, 241, 0.2); color: var(--primary-light); font-weight: 700; }
-
         .reader-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--reader-bg); color: var(--reader-text); z-index: 1000; display: none; flex-direction: column; }
         .reader-container.active { display: flex; }
         .reader-header, .reader-footer { padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
@@ -470,39 +466,16 @@
                 id: "1700000001001",
                 title: "The Mystery of the Clockwork Manor",
                 author: "Arthur Vance",
+                authorBio: "A thrilling detective story set in a foggy Victorian estate where every clock hides a secret.",
+                authorPic: "",
+                authorFb: "",
                 genre: "Mystery",
                 language: "English",
                 cover: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=500&q=80",
                 synopsis: "A thrilling detective story set in a foggy Victorian estate where every clock hides a secret.",
                 views: 142,
-                comments: [
-                    { author: "ReaderOne", text: "Great mystery! The dark theme looks wonderful.", date: "2026-06-06" }
-                ],
-                chapters: [
-                    {
-                        number: 1,
-                        title: "Chapter 1: The Midnight Chime",
-                        content: "The heavy fog rolled over the cobblestone courtyard of Manor Blackwood. Inspector Vance adjusted his coat collar against the damp chill. Inside, the grandfather clock had just struck midnight—twelve slow, deliberate notes that seemed to echo through the empty halls.\n\nHe pushed open the heavy oak door. The room was dark, illuminated only by the faint glow of embers in the hearth. Something was terribly wrong."
-                    }
-                ]
-            },
-            {
-                id: "1700000001002",
-                title: "Echoes of the Forgotten Kingdom",
-                author: "Elena Rostova",
-                genre: "Fantasy",
-                language: "English",
-                cover: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=500&q=80",
-                synopsis: "An epic tale of magic, lost thrones, and a young traveler destined to awaken an ancient realm.",
-                views: 215,
                 comments: [],
-                chapters: [
-                    {
-                        number: 1,
-                        title: "Chapter 1: Whispers in the Wind",
-                        content: "The mountains of Eldoria had stood silent for a thousand years. To the villagers below, they were simply jagged peaks touching the sky. But to Lyra, they held a song—a faint, rhythmic hum that only she could hear.\n\nShe gripped her staff tighter as the wind whipped her cloak around her shoulders. Today was the day she would cross the ridge and find out what lay beyond."
-                    }
-                ]
+                chapters: [{ number: 1, title: "Chapter 1", content: "Sample content..." }]
             }
         ];
 
@@ -511,7 +484,6 @@
 
         let savedBookmarks = JSON.parse(localStorage.getItem('pocket_bookmarks')) || [];
         let authorBios = JSON.parse(localStorage.getItem('pocket_author_bios')) || {};
-        let readingProgress = JSON.parse(localStorage.getItem('pocket_reading_progress')) || null;
         
         let userProfile = JSON.parse(localStorage.getItem('pocket_user_profile')) || {
             name: "",
@@ -538,20 +510,9 @@
               snapshot.forEach(doc => {
                 cloudNovels.push({ id: doc.id, ...doc.data() });
               });
-              const cloudIds = cloudNovels.map(n => String(n.id));
-              const missingSamples = defaultSampleNovels.filter(s => !cloudIds.includes(String(s.id)));
-              novels = [...cloudNovels, ...missingSamples];
+              novels = cloudNovels;
               localStorage.setItem('pocket_novels', JSON.stringify(novels));
             }
-
-            const authorsSnapshot = await db.collection("authorsDirectory").get();
-            if (!authorsSnapshot.empty) {
-              authorsSnapshot.forEach(doc => {
-                authorBios[doc.id] = doc.data();
-              });
-              localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
-            }
-
             if (typeof renderLibrary === 'function') renderLibrary();
             if (typeof applyFilters === 'function') applyFilters();
           } catch (error) {
@@ -613,9 +574,7 @@
           }
         }
 
-        function closeAuthModal() {
-          document.getElementById('authModal').style.display = 'none';
-        }
+        function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
 
         function handleEmailLoginSubmit() {
           const email = document.getElementById('authEmailInput').value.trim();
@@ -745,13 +704,20 @@
 
             if (currentUser) {
                 await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
-                await db.collection("authorsDirectory").doc(userProfile.name).set({
-                    bio: userProfile.bio,
-                    picture: userProfile.picture,
-                    facebookUrl: userProfile.facebookUrl
-                }, { merge: true });
+                
+                // Update all novels by this author in Firestore so readers instantly see new bio/pic
+                const snapshot = await db.collection("publicNovels").where("author", "==", userProfile.name).get();
+                const batch = db.batch();
+                snapshot.forEach(docSnap => {
+                    batch.update(docSnap.ref, {
+                        authorBio: userProfile.bio,
+                        authorPic: userProfile.picture,
+                        authorFb: userProfile.facebookUrl
+                    });
+                });
+                await batch.commit();
             }
-            showToast("Profile updated globally!", "fa-circle-check");
+            showToast("Profile updated globally for readers!", "fa-circle-check");
             renderProfileBooks();
         }
 
@@ -807,7 +773,7 @@
                         <div class="novel-title">${n.title}</div>
                     </div>
                     <div style="padding: 0 0.95rem 0.95rem 0.95rem;">
-                        <span class="novel-author" onclick="openAuthorProfile('${n.author}')">By ${n.author}</span>
+                        <span class="novel-author" onclick="openAuthorProfile('${n.id}')">By ${n.author}</span>
                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                             <div class="novel-stats"><i class="fa-solid fa-eye"></i> ${n.views || 0} views</div>
                             <div class="novel-stats"><i class="fa-solid fa-book"></i> ${n.chapters ? n.chapters.length : 0} Chapters</div>
@@ -817,24 +783,16 @@
             `).join('');
         }
 
-        async function openAuthorProfile(authorName) {
+        function openAuthorProfile(novelId) {
+            const novel = novels.find(n => n.id == novelId);
+            if (!novel) return;
+
+            const authorName = novel.author || "Unknown Author";
+            const bioText = novel.authorBio || authorBios[authorName]?.bio || "Author on Pocket Novels.";
+            const picUrl = novel.authorPic || authorBios[authorName]?.picture || "";
+            const fbUrl = novel.authorFb || authorBios[authorName]?.facebookUrl || "";
+
             document.getElementById('publicAuthorName').innerText = authorName;
-            
-            let authorBioData = authorBios[authorName];
-            if (!authorBioData) {
-                try {
-                    const doc = await db.collection("authorsDirectory").doc(authorName).get();
-                    if (doc.exists) {
-                        authorBioData = doc.data();
-                        authorBios[authorName] = authorBioData;
-                    }
-                } catch(e) { console.log(e); }
-            }
-
-            const bioText = authorBioData?.bio || "Author on Pocket Novels.";
-            const picUrl = authorBioData?.picture || "";
-            const fbUrl = authorBioData?.facebookUrl || "";
-
             document.getElementById('publicAuthorBio').innerText = bioText;
             
             const picContainer = document.getElementById('publicAuthorPic');
@@ -887,7 +845,7 @@
 
             container.innerHTML = `
                 <h2>${currentNovel.title}</h2>
-                <p style="margin-bottom: 0.5rem;">By <span style="color: var(--primary-light); cursor: pointer; text-decoration: underline;" onclick="openAuthorProfile('${currentNovel.author}')">${currentNovel.author}</span> • <span style="background: rgba(99,102,241,0.2); padding: 2px 8px; border-radius: 4px;">${currentNovel.genre}</span></p>
+                <p style="margin-bottom: 0.5rem;">By <span style="color: var(--primary-light); cursor: pointer; text-decoration: underline;" onclick="openAuthorProfile('${currentNovel.id}')">${currentNovel.author}</span> • <span style="background: rgba(99,102,241,0.2); padding: 2px 8px; border-radius: 4px;">${currentNovel.genre}</span></p>
                 <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;"><i class="fa-solid fa-eye"></i> ${currentNovel.views} Views</p>
                 <img src="${currentNovel.cover}" style="max-height: 250px; border-radius: 12px; margin-bottom: 1rem;">
                 <p style="line-height: 1.6; margin-bottom: 1.5rem;">${currentNovel.synopsis}</p>
@@ -983,6 +941,9 @@
                 id: novelId,
                 title: document.getElementById('pubTitle').value,
                 author: userProfile.name || currentUser.displayName || "Author",
+                authorBio: userProfile.bio || "",
+                authorPic: userProfile.picture || "",
+                authorFb: userProfile.facebookUrl || "",
                 genre: document.getElementById('pubGenre').value,
                 language: document.getElementById('pubLanguage').value,
                 alignment: document.getElementById('pubAlignment').value,
