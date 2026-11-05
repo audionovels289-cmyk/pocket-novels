@@ -661,18 +661,19 @@ firebase.auth().onAuthStateChanged(async (user) => {
         try {
             // Fetch saved profile from Firestore using our secure subcollection function
             const data = await loadUserProfileFromCloud();
-                        if (data) {
-                userProfile.name = data.name || user.displayName || userProfile.name || "Anonymous Author";
+            if (data) {
+                userProfile.name = data.name || user.displayName || "Anonymous Author";
                 userProfile.email = user.email || "";
-                userProfile.bio = data.bio || userProfile.bio || "";
-                userProfile.picture = data.picture || user.photoURL || userProfile.picture || "";
-                userProfile.facebookUrl = data.facebookUrl || userProfile.facebookUrl || "";
+                userProfile.bio = data.bio || "";
+                userProfile.picture = data.picture || user.photoURL || "";
+                userProfile.facebookUrl = data.facebookUrl || "";
             } else {
-                userProfile.name = user.displayName || userProfile.name || "Anonymous Author";
+                userProfile.name = user.displayName || "Anonymous Author";
                 userProfile.email = user.email || "";
-                userProfile.picture = user.photoURL || userProfile.picture || "";
+                userProfile.picture = user.photoURL || "";
+                userProfile.bio = "";
+                userProfile.facebookUrl = "";
             }
-
         } catch (err) {
             console.error("Error loading user profile from Firestore:", err);
             userProfile.name = user.displayName || "Anonymous Author";
@@ -1316,65 +1317,59 @@ readerContainer.dir = currentNovel.alignment === 'rtl' ? 'rtl' : 'ltr';
         }
 
         updateProfileUI();
-                const lastView = localStorage.getItem('pocket_last_view') || 'exploreView';
+        const lastView = localStorage.getItem('pocket_last_view') || 'exploreView';
         switchView(lastView);
-
         async function saveNovelsToCloud(novelsData) {
-            if (!currentUser) return;
-            try {
-                await db.collection("users").doc(currentUser.uid).collection("appData").doc("userNovels").set({
-                    novels: novelsData,
-                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                console.log("User library saved to cloud!");
-            } catch (error) {
-                console.error("Error saving user library: ", error);
-            }
-        }
+  try {
+    await db.collection("appData").doc("userNovels").set({
+      novels: novelsData,
+      lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    console.log("Novels successfully saved to cloud!");
+  } catch (error) {
+    console.error("Error saving to Firestore: ", error);
+  }
+}
 
-        async function loadNovelsFromCloud() {
-            if (!currentUser) return null;
-            try {
-                const doc = await db.collection("users").doc(currentUser.uid).collection("appData").doc("userNovels").get();
-                if (doc.exists) {
-                    return doc.data().novels;
-                }
-                return null;
-            } catch (error) {
-                console.error("Error loading user library: ", error);
-                return null;
-            }
-        }
+async function loadNovelsFromCloud() {
+  try {
+    const doc = await db.collection("appData").doc("userNovels").get();
+    if (doc.exists) {
+      return doc.data().novels;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error loading from Firestore: ", error);
+    return null;
+  }
+    async function saveUserProfileToCloud(profileData) {
+  try {
+    if (!currentUser) return;
+    await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").set({
+      name: profileData.name || "",
+      bio: profileData.bio || "",
+      facebookUrl: profileData.facebookUrl || "",
+      picture: profileData.picture || "",
+      lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    console.log("Complete profile successfully saved to cloud!");
+  } catch (error) {
+    console.error("Error saving profile to cloud:", error);
+  }
+}
 
-        async function saveUserProfileToCloud(profileData) {
-            try {
-                if (!currentUser) return;
-                await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").set({
-                    name: profileData.name || "",
-                    bio: profileData.bio || "",
-                    facebookUrl: profileData.facebookUrl || "",
-                    picture: profileData.picture || "",
-                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                }, { merge: true });
-                console.log("Complete profile successfully saved to cloud!");
-            } catch (error) {
-                console.error("Error saving profile to cloud:", error);
-            }
-        }
-
-        async function loadUserProfileFromCloud() {
-            try {
-                if (!currentUser) return null;
-                const doc = await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").get();
-                if (doc.exists) {
-                    return doc.data();
-                }
-                return null;
-            } catch (error) {
-                console.error("Error loading profile from cloud:", error);
-                return null;
-            }
-        }
+async function loadUserProfileFromCloud() {
+  try {
+    if (!currentUser) return null;
+    const doc = await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").get();
+    if (doc.exists) {
+      return doc.data();
+    }
+    return null;
+  } catch (error) {
+    console.error("Error loading profile from cloud:", error);
+    return null;
+  }
 }
     // Automatically sync local storage novels to cloud when logging in
 async function syncLocalNovelsToCloud() {
@@ -1392,11 +1387,13 @@ async function syncLocalNovelsToCloud() {
         });
         console.log("Local novels successfully synced to cloud!");
       }
-                    } catch (error) {
-                    console.error("Error syncing local novels to cloud:", error);
-                }
-            }
-        }
+    } catch (error) {
+      console.error("Error syncing local novels to cloud:", error);
+    }
+  }
+}
+
+}
     </script>
     <!-- Professional Auth Modal Overlay -->
 <div id="authModal" class="auth-modal-overlay" style="display: none;">
