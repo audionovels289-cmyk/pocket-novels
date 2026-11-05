@@ -921,11 +921,19 @@ async function loadUserNovelsFromCloud(uid) {
             `).join('');
         }
 
-        function toggleEditProfile() {
+                function toggleEditProfile() {
             const card = document.getElementById('editProfileCard');
-            card.style.display = card.style.display === 'none' ? 'block' : 'none';
+            const isOpening = card.style.display === 'none' || card.style.display === '';
+            
+            if (isOpening) {
+                document.getElementById('editNameInput').value = userProfile.name || "";
+                document.getElementById('editBioInput').value = userProfile.bio || "";
+                document.getElementById('editSocialInput').value = userProfile.facebookUrl || "";
+            }
+            
+            card.style.display = isOpening ? 'block' : 'none';
         }
-
+        
         function previewProfilePic(event) {
             const file = event.target.files[0];
             if (file) {
