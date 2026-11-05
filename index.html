@@ -661,19 +661,18 @@ firebase.auth().onAuthStateChanged(async (user) => {
         try {
             // Fetch saved profile from Firestore using our secure subcollection function
             const data = await loadUserProfileFromCloud();
-            if (data) {
-                userProfile.name = data.name || user.displayName || "Anonymous Author";
+                        if (data) {
+                userProfile.name = data.name || user.displayName || userProfile.name || "Anonymous Author";
                 userProfile.email = user.email || "";
-                userProfile.bio = data.bio || "";
-                userProfile.picture = data.picture || user.photoURL || "";
-                userProfile.facebookUrl = data.facebookUrl || "";
+                userProfile.bio = data.bio || userProfile.bio || "";
+                userProfile.picture = data.picture || user.photoURL || userProfile.picture || "";
+                userProfile.facebookUrl = data.facebookUrl || userProfile.facebookUrl || "";
             } else {
-                userProfile.name = user.displayName || "Anonymous Author";
+                userProfile.name = user.displayName || userProfile.name || "Anonymous Author";
                 userProfile.email = user.email || "";
-                userProfile.picture = user.photoURL || "";
-                userProfile.bio = "";
-                userProfile.facebookUrl = "";
+                userProfile.picture = user.photoURL || userProfile.picture || "";
             }
+
         } catch (err) {
             console.error("Error loading user profile from Firestore:", err);
             userProfile.name = user.displayName || "Anonymous Author";
