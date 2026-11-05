@@ -1315,9 +1315,9 @@ readerContainer.dir = currentNovel.alignment === 'rtl' ? 'rtl' : 'ltr';
             renderGrid(myBooks, 'myPublishedGrid');
         }
 
-        updateProfileUI();
-                const lastView = localStorage.getItem('pocket_last_view') || 'exploreView';
-        switchView(lastView);
+                updateProfileUI();
+        const lastView = localStorage.getItem('pocket_last_view') || 'exploreView';
+                switchView(lastView);
 
         async function saveNovelsToCloud(novelsData) {
             if (!currentUser) return;
