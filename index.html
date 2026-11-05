@@ -136,7 +136,25 @@
         .auth-action-btn.secondary { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
         .auth-action-btn.secondary:hover { background: #30363d; }
 
-        /* Custom In-App Theme Toast Notification */
+        /* Custom In-App Dark Theme Dialog Modal */
+        #customModalOverlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center; z-index: 20000;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+        }
+        #customModalOverlay.show { opacity: 1; pointer-events: auto; }
+        .custom-modal-box {
+            background: #1e293b; border: 1px solid var(--border-color); width: 90%; max-width: 360px;
+            border-radius: var(--radius-lg); padding: 24px; color: var(--text-main); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center; transform: scale(0.9); transition: transform 0.2s ease;
+        }
+        #customModalOverlay.show .custom-modal-box { transform: scale(1); }
+        .custom-modal-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 10px; color: var(--primary-light); }
+        .custom-modal-text { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
+        .custom-modal-buttons { display: flex; gap: 10px; justify-content: center; }
+
+        /* Custom In-App Toast Notification */
         #appToast {
             position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
             background: #1e293b; color: #f8fafc; border: 1px solid var(--primary-light);
@@ -202,6 +220,18 @@
 
     <!-- Custom In-App Toast Popup Element -->
     <div id="appToast"><i class="fa-solid fa-circle-info" id="toastIcon"></i><span id="toastMessage">Notification message</span></div>
+
+    <!-- Custom In-App Dark Theme Dialog Modal -->
+    <div id="customModalOverlay">
+        <div class="custom-modal-box">
+            <div class="custom-modal-title" id="customModalTitle">Confirmation</div>
+            <div class="custom-modal-text" id="customModalText">Are you sure?</div>
+            <div class="custom-modal-buttons">
+                <button class="btn btn-secondary" id="customModalCancel" style="padding: 8px 18px; font-size: 0.85rem;">Cancel</button>
+                <button class="btn" id="customModalConfirm" style="padding: 8px 18px; font-size: 0.85rem;">OK</button>
+            </div>
+        </div>
+    </div>
 
     <header>
         <div class="logo" onclick="switchView('exploreView', true)">
@@ -461,6 +491,32 @@
             }, 3500);
         }
 
+        function showConfirmModal(title, text, onConfirm) {
+            const overlay = document.getElementById('customModalOverlay');
+            document.getElementById('customModalTitle').innerText = title;
+            document.getElementById('customModalText').innerText = text;
+            
+            overlay.classList.add('show');
+            
+            const confirmBtn = document.getElementById('customModalConfirm');
+            const cancelBtn = document.getElementById('customModalCancel');
+            
+            const cleanup = () => {
+                overlay.classList.remove('show');
+                confirmBtn.onclick = null;
+                cancelBtn.onclick = null;
+            };
+            
+            confirmBtn.onclick = () => {
+                cleanup();
+                onConfirm();
+            };
+            
+            cancelBtn.onclick = () => {
+                cleanup();
+            };
+        }
+
         const defaultSampleNovels = [
             {
                 id: "1700000001001",
@@ -574,9 +630,9 @@
 
         function handleAuthClick() {
           if (currentUser) {
-            if (confirm("Are you sure you want to sign out?")) {
+            showConfirmModal("Sign Out", "Are you sure you want to sign out?", () => {
               signOutUser();
-            }
+            });
           } else {
             const modal = document.getElementById('authModal');
             if (modal) modal.style.display = 'flex';
@@ -884,7 +940,7 @@
                     <button class="btn" onclick="startReading(0)"><i class="fa-solid fa-book-open"></i> Read</button>
                     <button class="btn btn-secondary" onclick="toggleBookmark('${currentNovel.id}')"><i class="fa-solid fa-bookmark"></i> ${isBookmarked ? 'Bookmarked' : 'Bookmark'}</button>
                     <button class="btn btn-secondary" onclick="shareNovel('${currentNovel.title}', '${currentNovel.author}')"><i class="fa-solid fa-share-nodes"></i> Share</button>
-                    ${isAuthor ? `<button class="btn btn-success" onclick="openAddChapterModal()"><i class="fa-solid fa-plus"></i> Add Chapter</button><button class="btn btn-danger" onclick="deleteNovel('${currentNovel.id}')"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
+                    ${isAuthor ? `<button class="btn btn-success" onclick="openAddChapterModal()"><i class="fa-solid fa-plus"></i> Add Chapter</button><button class="btn btn-danger" onclick="confirmDeleteNovel('${currentNovel.id}')"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
                 </div>
 
                 <h3>Chapters (${currentNovel.chapters.length})</h3>
@@ -910,8 +966,13 @@
             switchView('detailView');
         }
 
+        function confirmDeleteNovel(id) {
+            showConfirmModal("Delete Novel", "Are you sure you want to delete this novel? This cannot be undone.", () => {
+                deleteNovel(id);
+            });
+        }
+
         async function deleteNovel(id) {
-            if (!confirm("Are you sure you want to delete this novel? This cannot be undone.")) return;
             try {
                 showToast("Deleting novel...", "fa-spinner");
                 await db.collection("publicNovels").doc(String(id)).delete();
