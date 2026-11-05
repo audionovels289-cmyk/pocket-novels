@@ -63,8 +63,6 @@
         .view-section { display: none; }
         .view-section.active { display: block; }
 
-        .continue-banner { background: var(--gradient-primary); border-radius: var(--radius-md); padding: 1.2rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); }
-        
         .genre-filters { display: flex; gap: 8px; overflow-x: auto; padding: 0.5rem 0 1.2rem 0; white-space: nowrap; scrollbar-width: none; }
         .genre-filters::-webkit-scrollbar { display: none; }
         .genre-tab { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-muted); padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; flex-shrink: 0; }
@@ -330,32 +328,6 @@
                 </div>
             </div>
 
-            <!-- ADMIN AUTHORS DIRECTORY PANEL -->
-            <div id="adminSection" style="display: none; margin-bottom: 2rem;">
-                <button class="btn btn-secondary" onclick="toggleAdminDirectory()" style="margin-bottom: 1rem; width: 100%; border: 1px dashed var(--primary-light);">
-                    <i class="fa-solid fa-user-shield"></i> Admin: Toggle Authors Directory
-                </button>
-
-                <div id="adminDirectoryContainer" style="display: none; margin-bottom: 2rem;">
-                    <div class="studio-card">
-                        <h3><i class="fa-solid fa-user-shield"></i> Admin: Registered Authors Directory</h3>
-                        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 10px;">Track active authors, their bios, and stories.</p>
-                        <div style="overflow-x: auto;">
-                            <table class="admin-table" style="width: 100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr style="text-align: left; border-bottom: 1px solid var(--border-color);">
-                                        <th style="padding: 8px;">Author Name</th>
-                                        <th style="padding: 8px;">Bio</th>
-                                        <th style="padding: 8px;">Published Stories</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="adminAuthorsTableBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- EDIT PROFILE CARD -->
             <div class="studio-card" id="editProfileCard" style="display: none; margin-bottom: 2rem;">
                 <h3>Edit Author Profile</h3>
@@ -534,7 +506,6 @@
             }
         ];
 
-        // INSTANT LOAD: Load cached local novels immediately so there is zero delay on startup
         let cachedNovels = localStorage.getItem('pocket_novels');
         let novels = (cachedNovels && JSON.parse(cachedNovels).length > 0) ? JSON.parse(cachedNovels) : defaultSampleNovels;
 
@@ -557,10 +528,8 @@
         let currentFontSize = 18;
         let currentUser = null;
 
-        // Render instantly with cached novels
         applyFilters();
 
-        // Background Cloud Sync so latest data loads seamlessly
         async function initCloudData() {
           try {
             const snapshot = await db.collection("publicNovels").get();
@@ -573,9 +542,19 @@
               const missingSamples = defaultSampleNovels.filter(s => !cloudIds.includes(String(s.id)));
               novels = [...cloudNovels, ...missingSamples];
               localStorage.setItem('pocket_novels', JSON.stringify(novels));
-              if (typeof renderLibrary === 'function') renderLibrary();
-              if (typeof applyFilters === 'function') applyFilters();
             }
+
+            // Sync author profiles from cloud collection
+            const authorsSnapshot = await db.collection("authorsDirectory").get();
+            if (!authorsSnapshot.empty) {
+              authorsSnapshot.forEach(doc => {
+                authorBios[doc.id] = doc.data();
+              });
+              localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
+            }
+
+            if (typeof renderLibrary === 'function') renderLibrary();
+            if (typeof applyFilters === 'function') applyFilters();
           } catch (error) {
             console.error("Cloud sync notice:", error);
           }
@@ -593,7 +572,6 @@
               localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
               localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
           }
-          if (readingProgress) localStorage.setItem('pocket_reading_progress', JSON.stringify(readingProgress));
         }
 
         firebase.auth().onAuthStateChanged(async (user) => {
@@ -767,9 +745,15 @@
             toggleEditProfile();
 
             if (currentUser) {
+                // Save profile to user private data and public authorsDirectory for global visibility
                 await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
+                await db.collection("authorsDirectory").doc(userProfile.name).set({
+                    bio: userProfile.bio,
+                    picture: userProfile.picture,
+                    facebookUrl: userProfile.facebookUrl
+                }, { merge: true });
             }
-            showToast("Profile updated!", "fa-circle-check");
+            showToast("Profile updated globally!", "fa-circle-check");
             renderProfileBooks();
         }
 
@@ -835,10 +819,41 @@
             `).join('');
         }
 
-        function openAuthorProfile(authorName) {
+        async function openAuthorProfile(authorName) {
             document.getElementById('publicAuthorName').innerText = authorName;
-            document.getElementById('publicAuthorBio').innerText = authorBios[authorName]?.bio || "Author on Pocket Novels.";
-            document.getElementById('publicAuthorPic').innerHTML = `<span>${authorName.substring(0, 2).toUpperCase()}</span>`;
+            
+            // Fetch author profile from Firestore or local cache
+            let authorBioData = authorBios[authorName];
+            if (!authorBioData) {
+                try {
+                    const doc = await db.collection("authorsDirectory").doc(authorName).get();
+                    if (doc.exists) {
+                        authorBioData = doc.data();
+                        authorBios[authorName] = authorBioData;
+                    }
+                } catch(e) { console.log(e); }
+            }
+
+            const bioText = authorBioData?.bio || "Author on Pocket Novels.";
+            const picUrl = authorBioData?.picture || "";
+            const fbUrl = authorBioData?.facebookUrl || "";
+
+            document.getElementById('publicAuthorBio').innerText = bioText;
+            
+            const picContainer = document.getElementById('publicAuthorPic');
+            if (picUrl) {
+                picContainer.innerHTML = `<img src="${picUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+            } else {
+                picContainer.innerHTML = `<span>${authorName.substring(0, 2).toUpperCase()}</span>`;
+            }
+
+            const socialDisplay = document.getElementById('publicAuthorSocialDisplay');
+            if (fbUrl) {
+                socialDisplay.innerHTML = `<a href="${fbUrl}" target="_blank" style="color: #38bdf8; text-decoration: none;"><i class="fa-brands fa-facebook"></i> Facebook</a>`;
+            } else {
+                socialDisplay.innerHTML = '';
+            }
+
             const authorBooks = novels.filter(n => (n.author || "").trim().toLowerCase() === authorName.trim().toLowerCase());
             renderGrid(authorBooks, 'publicAuthorBooksGrid');
             switchView('authorPublicView');
@@ -848,7 +863,6 @@
             currentNovel = novels.find(n => n.id == id);
             if (!currentNovel) return;
             
-            // GLOBAL VIEW COUNT: Increment globally in Firestore and local state
             currentNovel.views = (currentNovel.views || 0) + 1;
             saveToStorage();
 
