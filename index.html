@@ -527,6 +527,7 @@
                 authorFb: "",
                 genre: "Mystery",
                 language: "English",
+                alignment: "ltr",
                 cover: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=500&q=80",
                 synopsis: "A thrilling detective story set in a foggy Victorian estate where every clock hides a secret.",
                 views: 142,
@@ -1106,9 +1107,14 @@
 
         function updateReader() {
             const ch = currentNovel.chapters[currentChapterIdx];
+            const alignment = currentNovel.alignment || 'ltr';
             document.getElementById('readerHeaderTitle').innerText = ch.title;
             document.getElementById('chapterIndicator').innerText = `Chapter ${currentChapterIdx + 1} of ${currentNovel.chapters.length}`;
-            document.getElementById('readerText').innerHTML = `<h2>${ch.title}</h2><div style="white-space: pre-wrap; line-height: 1.8;">${ch.content}</div>`;
+            
+            const readerTextEl = document.getElementById('readerText');
+            readerTextEl.style.direction = alignment;
+            readerTextEl.style.textAlign = alignment === 'rtl' ? 'right' : 'left';
+            readerTextEl.innerHTML = `<h2>${ch.title}</h2><div style="white-space: pre-wrap; line-height: 1.8;">${ch.content}</div>`;
         }
 
         function setReaderTheme(theme) {
