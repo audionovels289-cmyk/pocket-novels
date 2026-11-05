@@ -534,7 +534,10 @@
             }
         ];
 
-        let novels = [];
+        // INSTANT LOAD: Load cached local novels immediately so there is zero delay on startup
+        let cachedNovels = localStorage.getItem('pocket_novels');
+        let novels = (cachedNovels && JSON.parse(cachedNovels).length > 0) ? JSON.parse(cachedNovels) : defaultSampleNovels;
+
         let savedBookmarks = JSON.parse(localStorage.getItem('pocket_bookmarks')) || [];
         let authorBios = JSON.parse(localStorage.getItem('pocket_author_bios')) || {};
         let readingProgress = JSON.parse(localStorage.getItem('pocket_reading_progress')) || null;
@@ -554,6 +557,10 @@
         let currentFontSize = 18;
         let currentUser = null;
 
+        // Render instantly with cached novels
+        applyFilters();
+
+        // Background Cloud Sync so latest data loads seamlessly
         async function initCloudData() {
           try {
             const snapshot = await db.collection("publicNovels").get();
@@ -562,21 +569,16 @@
               snapshot.forEach(doc => {
                 cloudNovels.push({ id: doc.id, ...doc.data() });
               });
-              // Combine samples and cloud novels so sample stories are always available
               const cloudIds = cloudNovels.map(n => String(n.id));
               const missingSamples = defaultSampleNovels.filter(s => !cloudIds.includes(String(s.id)));
               novels = [...cloudNovels, ...missingSamples];
-            } else {
-              novels = defaultSampleNovels;
+              localStorage.setItem('pocket_novels', JSON.stringify(novels));
+              if (typeof renderLibrary === 'function') renderLibrary();
+              if (typeof applyFilters === 'function') applyFilters();
             }
           } catch (error) {
-            console.error("Error loading public novels from cloud:", error);
-            const localNovels = JSON.parse(localStorage.getItem('pocket_novels'));
-            novels = (localNovels && localNovels.length > 0) ? localNovels : defaultSampleNovels;
+            console.error("Cloud sync notice:", error);
           }
-          localStorage.setItem('pocket_novels', JSON.stringify(novels));
-          if (typeof renderLibrary === 'function') renderLibrary();
-          if (typeof applyFilters === 'function') applyFilters();
         }
 
         initCloudData();
@@ -842,11 +844,21 @@
             switchView('authorPublicView');
         }
 
-        function openNovelDetail(id) {
+        async function openNovelDetail(id) {
             currentNovel = novels.find(n => n.id == id);
             if (!currentNovel) return;
+            
+            // GLOBAL VIEW COUNT: Increment globally in Firestore and local state
             currentNovel.views = (currentNovel.views || 0) + 1;
             saveToStorage();
+
+            try {
+                await db.collection("publicNovels").doc(String(id)).update({
+                    views: currentNovel.views
+                });
+            } catch (err) {
+                console.log("Cloud view sync error:", err);
+            }
 
             const container = document.getElementById('detailContainer');
             const isBookmarked = savedBookmarks.includes(id);
@@ -865,6 +877,7 @@
             container.innerHTML = `
                 <h2>${currentNovel.title}</h2>
                 <p style="margin-bottom: 0.5rem;">By <span style="color: var(--primary-light); cursor: pointer; text-decoration: underline;" onclick="openAuthorProfile('${currentNovel.author}')">${currentNovel.author}</span> • <span style="background: rgba(99,102,241,0.2); padding: 2px 8px; border-radius: 4px;">${currentNovel.genre}</span></p>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;"><i class="fa-solid fa-eye"></i> ${currentNovel.views} Views</p>
                 <img src="${currentNovel.cover}" style="max-height: 250px; border-radius: 12px; margin-bottom: 1rem;">
                 <p style="line-height: 1.6; margin-bottom: 1.5rem;">${currentNovel.synopsis}</p>
                 
@@ -914,7 +927,6 @@
             if(idx !== -1) novels[idx] = currentNovel;
             saveToStorage();
 
-            // Sync comments update to cloud
             try {
                 await db.collection("publicNovels").doc(String(currentNovel.id)).update({
                     comments: currentNovel.comments
