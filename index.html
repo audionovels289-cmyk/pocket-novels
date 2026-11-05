@@ -478,7 +478,6 @@
     </div>
 
     <script>
-        // Custom Theme Toast Notification Replacement for Alerts
         function showToast(message, iconClass = "fa-circle-info") {
             const toast = document.getElementById('appToast');
             const msgEl = document.getElementById('toastMessage');
@@ -530,60 +529,6 @@
                         number: 1,
                         title: "Chapter 1: Whispers in the Wind",
                         content: "The mountains of Eldoria had stood silent for a thousand years. To the villagers below, they were simply jagged peaks touching the sky. But to Lyra, they held a song—a faint, rhythmic hum that only she could hear.\n\nShe gripped her staff tighter as the wind whipped her cloak around her shoulders. Today was the day she would cross the ridge and find out what lay beyond."
-                    }
-                ]
-            },
-            {
-                id: "1700000001003",
-                title: "A Summer in Kyoto",
-                author: "Kenji Sato",
-                genre: "Romance",
-                language: "English",
-                cover: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=500&q=80",
-                synopsis: "A gentle, heartwarming story of two artists finding inspiration and love beneath blooming cherry blossoms.",
-                views: 89,
-                comments: [],
-                chapters: [
-                    {
-                        number: 1,
-                        title: "Chapter 1: The Tea House",
-                        content: "The paper lanterns cast a warm, golden glow across the wooden veranda. Rain tapped softly against the bamboo garden outside, creating a peaceful rhythm that matched the quiet afternoon.\n\nAoi sat with her sketchbook open, charcoal pencil hovering over the paper. She looked up just as the sliding door opened, and a stranger stepped in out of the sudden summer shower."
-                    }
-                ]
-            },
-            {
-                id: "1700000001004",
-                title: "شام کا مسافر (The Evening Traveler)",
-                author: "احمد رضا (Ahmed Raza)",
-                genre: "Romance",
-                language: "Urdu",
-                cover: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=500&q=80",
-                synopsis: "ایک خوبصورت اردو ناول جو محبت، یادوں اور زندگی کے سفر کے گرد گھومتا ہے۔",
-                views: 110,
-                comments: [],
-                chapters: [
-                    {
-                        number: 1,
-                        title: "باب اول: پرانی یادیں",
-                        content: "سورج ڈوب رہا تھا اور آسمان پر نارنجی اور سرمئی رنگوں کا ایک حسین امتزاج بکھرا ہوا تھا۔ ریلوے اسٹیشن کے پلیٹ فارم پر مسافروں کا ہجوم کم ہو رہا تھا جب اس نے پہلی بار وہ پرانی آواز سنی۔\n\nوقت جیسے تھم گیا ہو، اور ماضی کے دریچے ایک بار پھر کھل گئے ہوں..."
-                    }
-                ]
-            },
-            {
-                id: "1700000001005",
-                title: "خوابوں کی بستی (City of Dreams)",
-                author: "فاطمہ خان (Fatima Khan)",
-                genre: "Fantasy",
-                language: "Urdu",
-                cover: "https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=500&q=80",
-                synopsis: "ایک طلسماتی دنیا کی کہانی جہاں خواب حقیقت کا روپ دھار لیتے ہیں۔",
-                views: 178,
-                comments: [],
-                chapters: [
-                    {
-                        number: 1,
-                        title: "باب اول: ان کہی کہانیاں",
-                        content: "رات کے اس پہر جب پوری بستی گہری نیند سو رہی تھی، کتابوں کے پرانے صندوق سے ہلکی سی روشنی نکلنے لگی۔ علی نے حیرت سے آگے بڑھ کر صندوق کا ڈھکن اٹھایا۔\n\nان اندر رکھی ہوئی سنہری جلد والی کتاب کے صفحات خود بخود پلٹنے لگے تھے..."
                     }
                 ]
             }
@@ -651,38 +596,23 @@
             const authBtn = document.getElementById('authBtn');
 
             if (user) {
-                console.log("Logged in as:", user.email || user.displayName);
                 if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
-
                 try {
-                    const data = await loadUserProfileFromCloud();
-                    if (data && data.name) {
-                        userProfile.name = data.name;
-                        userProfile.email = user.email || "";
-                        userProfile.bio = data.bio || "";
-                        userProfile.picture = data.picture || user.photoURL || "";
-                        userProfile.facebookUrl = data.facebookUrl || "";
+                    const doc = await db.collection("users").doc(user.uid).collection("appData").doc("userProfile").get();
+                    if (doc.exists && doc.data().name) {
+                        userProfile.name = doc.data().name;
+                        userProfile.bio = doc.data().bio || "";
+                        userProfile.picture = doc.data().picture || user.photoURL || "";
+                        userProfile.facebookUrl = doc.data().facebookUrl || "";
                     } else {
                         userProfile.name = user.displayName || user.email.split('@')[0];
-                        userProfile.email = user.email || "";
                         userProfile.picture = user.photoURL || "";
-                        userProfile.bio = "";
-                        userProfile.facebookUrl = "";
                     }
-                } catch (err) {
-                    console.error("Error loading user profile from Firestore:", err);
-                    userProfile.name = user.displayName || "Anonymous Author";
-                    userProfile.picture = user.photoURL || "";
+                } catch (e) {
+                    userProfile.name = user.displayName || "Author";
                 }
-
-                authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl };
-                localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
-                localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
-
                 updateProfileUI();
-                if (typeof renderLibrary === 'function') renderLibrary();
                 renderProfileBooks();
-
             } else {
                 if (authBtn) authBtn.innerHTML = `<i class="fa-solid fa-right-from-bracket"></i> Sign In`;
                 userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
@@ -702,117 +632,41 @@
         }
 
         function closeAuthModal() {
-          const modal = document.getElementById('authModal');
-          if (modal) modal.style.display = 'none';
+          document.getElementById('authModal').style.display = 'none';
         }
 
         function handleEmailLoginSubmit() {
           const email = document.getElementById('authEmailInput').value.trim();
           const password = document.getElementById('authPasswordInput').value;
-          if (!email || !password) {
-            showToast("Please enter email and password.", "fa-triangle-exclamation");
-            return;
-          }
-          signInWithEmail(email, password);
-          closeAuthModal();
+          if (!email || !password) { showToast("Enter email & password.", "fa-triangle-exclamation"); return; }
+          firebase.auth().signInWithEmailAndPassword(email, password)
+            .then(() => { showToast("Signed in successfully!", "fa-circle-check"); closeAuthModal(); })
+            .catch(err => showToast(err.message, "fa-triangle-exclamation"));
         }
 
         function handleEmailSignupSubmit() {
           const email = document.getElementById('authEmailInput').value.trim();
           const password = document.getElementById('authPasswordInput').value;
-          if (!email || !password) {
-            showToast("Please enter email and password.", "fa-triangle-exclamation");
-            return;
-          }
-          signUpWithEmail(email, password);
-          closeAuthModal();
+          if (!email || !password) { showToast("Enter email & password.", "fa-triangle-exclamation"); return; }
+          firebase.auth().createUserWithEmailAndPassword(email, password)
+            .then(() => { showToast("Account created!", "fa-circle-check"); closeAuthModal(); })
+            .catch(err => showToast(err.message, "fa-triangle-exclamation"));
         }
 
         function signInWithGoogle() {
             const provider = new firebase.auth.GoogleAuthProvider();
             firebase.auth().signInWithPopup(provider)
-                .then((result) => {
-                    const user = result.user;
-                    userProfile.name = user.displayName || user.email.split('@')[0];
-                    userProfile.email = user.email || "";
-                    userProfile.picture = user.photoURL || "";
-
-                    const userData = {
-                        uid: user.uid,
-                        name: userProfile.name,
-                        email: user.email,
-                        photoURL: userProfile.picture,
-                        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-                    };
-
-                    return db.collection("users").doc(user.uid).set(userData, { merge: true });
-                })
-                .then(() => {
-                    showToast("Successfully signed in with Google!", "fa-circle-check");
-                    updateProfileUI();
-                    closeAuthModal();
-                })
-                .catch((error) => showToast("Google Auth error: " + error.message, "fa-triangle-exclamation"));
-        }
-
-        function signInWithEmail(email, password) {
-          firebase.auth().signInWithEmailAndPassword(email, password)
-            .then((userCredential) => {
-              showToast("Signed in successfully!", "fa-circle-check");
-            })
-            .catch((error) => {
-              showToast("Sign-in error: " + error.message, "fa-triangle-exclamation");
-            });
-        }
-
-        function signUpWithEmail(email, password) {
-          firebase.auth().createUserWithEmailAndPassword(email, password)
-            .then((userCredential) => {
-              showToast("Account created successfully!", "fa-circle-check");
-            })
-            .catch((error) => {
-              showToast("Sign-up error: " + error.message, "fa-triangle-exclamation");
-            });
+                .then(() => { showToast("Google Sign-In successful!", "fa-circle-check"); closeAuthModal(); })
+                .catch(err => showToast(err.message, "fa-triangle-exclamation"));
         }
 
         function signOutUser() {
-          firebase.auth().signOut()
-            .then(() => {
+            firebase.auth().signOut().then(() => {
                 localStorage.removeItem('pocket_user_profile');
                 userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
                 updateProfileUI();
-                showToast("Signed out successfully.", "fa-circle-info");
-            })
-            .catch((error) => console.log("Sign out error:", error));
-        }
-
-        async function saveUserProfileToCloud(profileData) {
-          try {
-            if (!currentUser) return;
-            await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").set({
-              name: profileData.name || "",
-              bio: profileData.bio || "",
-              facebookUrl: profileData.facebookUrl || "",
-              picture: profileData.picture || "",
-              lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
-          } catch (error) {
-            console.error("Error saving profile to cloud:", error);
-          }
-        }
-
-        async function loadUserProfileFromCloud() {
-          try {
-            if (!currentUser) return null;
-            const doc = await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").get();
-            if (doc.exists) {
-              return doc.data();
-            }
-            return null;
-          } catch (error) {
-            console.error("Error loading profile from cloud:", error);
-            return null;
-          }
+                showToast("Signed out.", "fa-circle-info");
+            });
         }
 
         function updateProfileUI() {
@@ -822,26 +676,17 @@
 
             if (!userProfile.name) {
                 if (nameEl) nameEl.innerText = "Guest User";
-                if (bioEl) bioEl.innerText = "Please sign in to publish stories and customize your author profile.";
+                if (bioEl) bioEl.innerText = "Please sign in to publish stories.";
                 if (socialEl) socialEl.innerHTML = '';
             } else {
                 if (nameEl) nameEl.innerText = userProfile.name;
                 if (bioEl) bioEl.innerText = userProfile.bio || "No bio added yet.";
-                if (socialEl) {
-                    if (userProfile.facebookUrl) {
-                        socialEl.innerHTML = `<a href="${userProfile.facebookUrl}" target="_blank" style="color: #38bdf8; text-decoration: none;"><i class="fa-brands fa-facebook"></i> Author Facebook Page</a>`;
-                    } else {
-                        socialEl.innerHTML = '';
-                    }
+                if (socialEl && userProfile.facebookUrl) {
+                    socialEl.innerHTML = `<a href="${userProfile.facebookUrl}" target="_blank" style="color: #38bdf8; text-decoration: none;"><i class="fa-brands fa-facebook"></i> Facebook</a>`;
                 }
             }
-
-            const bookmarkEl = document.getElementById('profileBookmarkStats');
-            if (bookmarkEl) bookmarkEl.innerHTML = `<i class="fa-solid fa-bookmark"></i> ${savedBookmarks.length} Bookmarks`;
-
             const picContainer = document.getElementById('profilePicContainer');
             const headerAvatar = document.getElementById('headerAvatar');
-
             if (userProfile.picture) {
                 if (picContainer) picContainer.innerHTML = `<img src="${userProfile.picture}">`;
                 if (headerAvatar) headerAvatar.innerHTML = `<img src="${userProfile.picture}">`;
@@ -850,109 +695,56 @@
                 if (picContainer) picContainer.innerHTML = `<span>${initials}</span>`;
                 if (headerAvatar) headerAvatar.innerHTML = `<span>${initials}</span>`;
             }
-
-            const adminSection = document.getElementById('adminSection');
-            if (adminSection) {
-                if (userProfile.name === "Ujala Naz" || (currentUser && currentUser.email === "roshaani681@gmail.com")) {
-                    adminSection.style.display = 'block';
-                    renderAdminAuthorsTable();
-                } else {
-                    adminSection.style.display = 'none';
-                }
-            }
-        }
-
-        function toggleAdminDirectory() {
-            const container = document.getElementById('adminDirectoryContainer');
-            if (container.style.display === 'none' || container.style.display === '') {
-                if (typeof renderAdminAuthorsTable === 'function') {
-                    renderAdminAuthorsTable();
-                }
-                container.style.display = 'block';
-            } else {
-                container.style.display = 'none';
-            }
-        }
-
-        function renderAdminAuthorsTable() {
-            const tableBody = document.getElementById('adminAuthorsTableBody');
-            if(!tableBody) return;
-
-            const authorsMap = {};
-            novels.forEach(n => {
-                const authorKey = (n.author || "Anonymous").trim();
-                if(!authorsMap[authorKey]) {
-                    authorsMap[authorKey] = { 
-                        count: 0, 
-                        bio: (authorBios[authorKey] ? authorBios[authorKey].bio : "No bio provided") 
-                    };
-                }
-                authorsMap[authorKey].count++;
-            });
-            const currentAuthorKey = (userProfile.name || "").trim();
-            if(currentAuthorKey && !authorsMap[currentAuthorKey]) {
-                authorsMap[currentAuthorKey] = { count: 0, bio: userProfile.bio };
-            }
-
-            const authorNames = Object.keys(authorsMap);
-            if(authorNames.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="3" style="color: var(--text-muted); text-align: center;">No authors registered yet.</td></tr>`;
-                return;
-            }
-
-            tableBody.innerHTML = authorNames.map(name => `
-                <tr>
-                    <td style="font-weight: 700; color: var(--primary-light); cursor: pointer;" onclick="openAuthorProfile('${name}')">${name}</td>
-                    <td style="color: var(--text-muted);">${authorsMap[name].bio}</td>
-                    <td>${authorsMap[name].count} book(s)</td>
-                </tr>
-            `).join('');
         }
 
         function toggleEditProfile() {
             if (!currentUser) {
-                showToast("Please sign in first to edit your profile.", "fa-triangle-exclamation");
-                const modal = document.getElementById('authModal');
-                if (modal) modal.style.display = 'flex';
+                showToast("Please sign in first.", "fa-triangle-exclamation");
+                document.getElementById('authModal').style.display = 'flex';
                 return;
             }
             const card = document.getElementById('editProfileCard');
             const isOpening = card.style.display === 'none' || card.style.display === '';
-            
             if (isOpening) {
                 document.getElementById('editNameInput').value = userProfile.name || "";
                 document.getElementById('editBioInput').value = userProfile.bio || "";
                 document.getElementById('editSocialInput').value = userProfile.facebookUrl || "";
             }
-            
             card.style.display = isOpening ? 'block' : 'none';
         }
-        
-        function previewProfilePic(event) {
+
+        function previewGalleryImage(event) {
             const file = event.target.files[0];
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    // Compress image via canvas to prevent size overload
                     const img = new Image();
                     img.src = e.target.result;
                     img.onload = function() {
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
-                        const MAX_WIDTH = 300;
-                        const MAX_HEIGHT = 300;
-                        let width = img.width;
-                        let height = img.height;
-                        if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } }
-                        else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
-                        canvas.width = width;
-                        canvas.height = height;
-                        ctx.drawImage(img, 0, 0, width, height);
-                        uploadedProfilePicUrl = canvas.toDataURL('image/jpeg', 0.7);
-                        const preview = document.getElementById('profilePicPreview');
-                        preview.src = uploadedProfilePicUrl;
+                        canvas.width = 300;
+                        canvas.height = 400;
+                        ctx.drawImage(img, 0, 0, 300, 400);
+                        uploadedCoverDataUrl = canvas.toDataURL('image/jpeg', 0.6);
+                        const preview = document.getElementById('coverPreview');
+                        preview.src = uploadedCoverDataUrl;
                         preview.style.display = 'block';
                     }
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function previewProfilePic(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedProfilePicUrl = e.target.result;
+                    const preview = document.getElementById('profilePicPreview');
+                    preview.src = uploadedProfilePicUrl;
+                    preview.style.display = 'block';
                 };
                 reader.readAsDataURL(file);
             }
@@ -965,76 +757,28 @@
             userProfile.facebookUrl = document.getElementById('editSocialInput').value.trim();
             if (uploadedProfilePicUrl) userProfile.picture = uploadedProfilePicUrl;
 
-            authorBios[userProfile.name] = { 
-                bio: userProfile.bio, 
-                picture: userProfile.picture, 
-                facebookUrl: userProfile.facebookUrl 
-            };
-
             saveToStorage();
             updateProfileUI();
             toggleEditProfile();
 
-            await saveUserProfileToCloud({
-                name: userProfile.name,
-                bio: userProfile.bio,
-                facebookUrl: userProfile.facebookUrl,
-                picture: userProfile.picture
-            });
-
-            showToast("Profile updated successfully!", "fa-circle-check");
+            if (currentUser) {
+                await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
+            }
+            showToast("Profile updated!", "fa-circle-check");
             renderProfileBooks();
         }
 
         function switchView(viewId, saveState = false) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
-
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            if(viewId === 'exploreView') {
-                document.getElementById('navExplore').classList.add('active');
-                renderContinueReading();
-            }
+            if(viewId === 'exploreView') document.getElementById('navExplore').classList.add('active');
             if(viewId === 'libraryView') document.getElementById('navLibrary').classList.add('active');
             if(viewId === 'studioView') document.getElementById('navStudio').classList.add('active');
-
             if(viewId === 'exploreView') applyFilters();
             if(viewId === 'libraryView') renderLibrary();
             if(viewId === 'profileView') renderProfileBooks();
-
             if(saveState) localStorage.setItem('pocket_last_view', viewId);
-        }
-
-        function renderContinueReading() {
-            const container = document.getElementById('continueReadingContainer');
-            if(!readingProgress || !novels.length) {
-                container.innerHTML = '';
-                return;
-            }
-            const novel = novels.find(n => n.id === readingProgress.novelId);
-            if(!novel) {
-                container.innerHTML = '';
-                return;
-            }
-
-            container.innerHTML = `
-                <div class="continue-banner">
-                    <div>
-                        <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; opacity: 0.8;">Continue Reading</div>
-                        <div style="font-size: 1.1rem; font-weight: 800; margin: 2px 0;">${novel.title}</div>
-                        <div style="font-size: 0.85rem; opacity: 0.9;">Chapter ${readingProgress.chapterIdx + 1}: ${novel.chapters[readingProgress.chapterIdx].title}</div>
-                    </div>
-                    <button class="btn btn-secondary" onclick="resumeReading()"><i class="fa-solid fa-play"></i> Resume</button>
-                </div>
-            `;
-        }
-
-        function resumeReading() {
-            if(!readingProgress) return;
-            currentNovel = novels.find(n => n.id === readingProgress.novelId);
-            if(currentNovel) {
-                startReading(readingProgress.chapterIdx);
-            }
         }
 
         function filterByGenre(genre, element) {
@@ -1054,48 +798,17 @@
                 filtered = filtered.filter(n => 
                     n.title.toLowerCase().includes(query) || 
                     n.author.toLowerCase().includes(query) || 
-                    n.genre.toLowerCase().includes(query) ||
-                    (n.language && n.language.toLowerCase().includes(query))
+                    n.genre.toLowerCase().includes(query)
                 );
             }
             renderGrid(filtered, 'novelGrid');
-        }
-
-        function previewGalleryImage(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    // Compress cover image to ensure smooth Firestore upload
-                    const img = new Image();
-                    img.src = e.target.result;
-                    img.onload = function() {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        const MAX_WIDTH = 500;
-                        const MAX_HEIGHT = 700;
-                        let width = img.width;
-                        let height = img.height;
-                        if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } }
-                        else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
-                        canvas.width = width;
-                        canvas.height = height;
-                        ctx.drawImage(img, 0, 0, width, height);
-                        uploadedCoverDataUrl = canvas.toDataURL('image/jpeg', 0.75);
-                        const preview = document.getElementById('coverPreview');
-                        preview.src = uploadedCoverDataUrl;
-                        preview.style.display = 'block';
-                    }
-                };
-                reader.readAsDataURL(file);
-            }
         }
 
         function renderGrid(dataset, targetContainerId) {
             const grid = document.getElementById(targetContainerId);
             if(!grid) return;
             if(dataset.length === 0) {
-                grid.innerHTML = `<p style="color: var(--text-muted); grid-column: 1/-1;">No novels found in this section.</p>`;
+                grid.innerHTML = `<p style="color: var(--text-muted); grid-column: 1/-1;">No novels found.</p>`;
                 return;
             }
             grid.innerHTML = dataset.map(n => `
@@ -1107,7 +820,7 @@
                         <div class="novel-title">${n.title}</div>
                     </div>
                     <div style="padding: 0 0.95rem 0.95rem 0.95rem;">
-                        <span class="novel-author" onclick="event.stopPropagation(); openAuthorProfile('${n.author}')">By ${n.author}</span>
+                        <span class="novel-author" onclick="openAuthorProfile('${n.author}')">By ${n.author}</span>
                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                             <div class="novel-stats"><i class="fa-solid fa-eye"></i> ${n.views || 0} views</div>
                             <div class="novel-stats"><i class="fa-solid fa-book"></i> ${n.chapters ? n.chapters.length : 0} Chapters</div>
@@ -1118,54 +831,10 @@
         }
 
         function openAuthorProfile(authorName) {
-            const pubName = document.getElementById('publicAuthorName');
-            const pubBio = document.getElementById('publicAuthorBio');
-            const pubPic = document.getElementById('publicAuthorPic');
-            const pubSocial = document.getElementById('publicAuthorSocialDisplay');
-            
-            pubName.innerText = authorName;
-            
-            let bioText = "No bio provided.";
-            let picUrl = "";
-            let fbUrl = "";
-
-            const targetAuthor = authorName.trim().toLowerCase();
-            const myAuthorName = (userProfile.name || "").trim().toLowerCase();
-
-            if (targetAuthor === myAuthorName) {
-                bioText = userProfile.bio || "No bio provided.";
-                picUrl = userProfile.picture || "";
-                fbUrl = userProfile.facebookUrl || "";
-            } else if (authorBios[authorName]) {
-                bioText = authorBios[authorName].bio || "No bio provided.";
-                picUrl = authorBios[authorName].picture || "";
-                fbUrl = authorBios[authorName].facebookUrl || "";
-            } else {
-                const matchingKey = Object.keys(authorBios).find(k => k.trim().toLowerCase() === targetAuthor);
-                if (matchingKey && authorBios[matchingKey]) {
-                    bioText = authorBios[matchingKey].bio || "No bio provided.";
-                    picUrl = authorBios[matchingKey].picture || "";
-                    fbUrl = authorBios[matchingKey].facebookUrl || "";
-                }
-            }
-
-            pubBio.innerText = bioText;
-
-            if (pubSocial) {
-                if (fbUrl) {
-                    pubSocial.innerHTML = `<a href="${fbUrl}" target="_blank" style="color: #38bdf8; text-decoration: none;"><i class="fa-brands fa-facebook"></i> Author Facebook Page</a>`;
-                } else {
-                    pubSocial.innerHTML = '';
-                }
-            }
-
-            if (picUrl) {
-                pubPic.innerHTML = `<img src="${picUrl}">`;
-            } else {
-                pubPic.innerHTML = `<span>${authorName.substring(0, 2).toUpperCase()}</span>`;
-            }
-
-            const authorBooks = novels.filter(n => (n.author || "").trim().toLowerCase() === targetAuthor);
+            document.getElementById('publicAuthorName').innerText = authorName;
+            document.getElementById('publicAuthorBio').innerText = authorBios[authorName]?.bio || "Author on Pocket Novels.";
+            document.getElementById('publicAuthorPic').innerHTML = `<span>${authorName.substring(0, 2).toUpperCase()}</span>`;
+            const authorBooks = novels.filter(n => (n.author || "").trim().toLowerCase() === authorName.trim().toLowerCase());
             renderGrid(authorBooks, 'publicAuthorBooksGrid');
             switchView('authorPublicView');
         }
@@ -1180,112 +849,43 @@
             const isBookmarked = savedBookmarks.includes(id);
             const isAuthor = currentUser && (currentNovel.author || "").trim().toLowerCase() === (userProfile.name || "").trim().toLowerCase();
 
-            const commentsHtml = (currentNovel.comments || []).map(c => `
-                <div style="background: var(--bg-card, #1e1e2f); border: 1px solid var(--border-color, #2a2a40); border-radius: 8px; padding: 12px 15px; margin-bottom: 10px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <strong style="font-size: 0.9rem; color: var(--text-main, #fff);">${c.author || 'Reader'}</strong>
-                        <span style="font-size: 0.75rem; color: var(--text-muted, #888);">${c.date || ''}</span>
-                    </div>
-                    <p style="font-size: 0.9rem; color: var(--text-sub, #ccc); margin: 0; line-height: 1.4;">${c.text}</p>
-                </div>
-            `).join('') || '<p style="color: var(--text-muted); font-size: 0.85rem;">No comments yet.</p>';
-
             container.innerHTML = `
                 <h2>${currentNovel.title}</h2>
-                <p style="margin-bottom: 0.5rem;">By <span style="color: var(--primary-light); cursor: pointer; text-decoration: underline;" onclick="openAuthorProfile('${currentNovel.author}')">${currentNovel.author}</span> • <span style="background: rgba(99,102,241,0.2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--primary);">${currentNovel.genre}</span> • <span style="background: rgba(236,72,153,0.2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--secondary); color: #ec4899;">${currentNovel.language || 'English'}</span></p>
-                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;"><i class="fa-solid fa-eye"></i> ${currentNovel.views} Views</p>
-                
-                <img src="${currentNovel.cover}" style="max-height: 300px; border-radius: 12px; margin-bottom: 1rem;">
+                <p style="margin-bottom: 0.5rem;">By <span style="color: var(--primary-light); cursor: pointer; text-decoration: underline;" onclick="openAuthorProfile('${currentNovel.author}')">${currentNovel.author}</span> • <span style="background: rgba(99,102,241,0.2); padding: 2px 8px; border-radius: 4px;">${currentNovel.genre}</span></p>
+                <img src="${currentNovel.cover}" style="max-height: 250px; border-radius: 12px; margin-bottom: 1rem;">
                 <p style="line-height: 1.6; margin-bottom: 1.5rem;">${currentNovel.synopsis}</p>
                 
                 <div style="display: flex; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap;">
                     <button class="btn" onclick="startReading(0)"><i class="fa-solid fa-book-open"></i> Read</button>
                     <button class="btn btn-secondary" onclick="toggleBookmark('${currentNovel.id}')"><i class="fa-solid fa-bookmark"></i> ${isBookmarked ? 'Bookmarked' : 'Bookmark'}</button>
-                    <button class="btn btn-secondary" onclick="shareNovel('${currentNovel.title}')"><i class="fa-solid fa-share-nodes"></i> Share</button>
-                    ${isAuthor ? `
-                        <button class="btn btn-success" onclick="openAddChapterModal()"><i class="fa-solid fa-plus"></i> Add Chapter</button>
-                        <button class="btn btn-danger" onclick="deleteNovel('${currentNovel.id}')"><i class="fa-solid fa-trash"></i> Delete</button>
-                    ` : ''}
+                    ${isAuthor ? `<button class="btn btn-success" onclick="openAddChapterModal()"><i class="fa-solid fa-plus"></i> Add Chapter</button><button class="btn btn-danger" onclick="deleteNovel('${currentNovel.id}')"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
                 </div>
 
                 <h3>Chapters (${currentNovel.chapters.length})</h3>
-                <div style="margin-top: 10px; margin-bottom: 2rem;">
+                <div style="margin-top: 10px;">
                     ${currentNovel.chapters.map((ch, idx) => `
                         <div style="background: var(--bg-card); padding: 12px; border-radius: 8px; margin-bottom: 8px; cursor: pointer;" onclick="startReading(${idx})">
                             ${ch.title}
                         </div>
                     `).join('')}
                 </div>
-
-                <div class="comments-section">
-                    <h3><i class="fa-solid fa-comments"></i> Reader Comments (${(currentNovel.comments || []).length})</h3>
-                    <form onsubmit="handleAddComment(event)" style="margin: 1rem 0;">
-                        <div class="form-group" style="margin-bottom: 0.8rem;">
-                            <input type="text" id="commentTextInput" class="form-control" placeholder="Write a comment..." required>
-                        </div>
-                        <button type="submit" class="btn btn-secondary" style="padding: 6px 16px; font-size: 0.85rem;"><i class="fa-solid fa-paper-plane"></i> Post</button>
-                    </form>
-                    <div id="commentsContainer">${commentsHtml}</div>
-                </div>
             `;
             switchView('detailView');
-        }
-
-        function shareNovel(title) {
-            if (navigator.share) {
-                navigator.share({
-                    title: title,
-                    text: `Check out "${title}" on Pocket Novels!`,
-                    url: window.location.href
-                }).catch(() => {});
-            } else {
-                showToast(`Link copied for "${title}"!`, "fa-share-nodes");
-            }
-        }
-
-        function handleAddComment(e) {
-            e.preventDefault();
-            const textInput = document.getElementById('commentTextInput');
-            if(!textInput.value.trim()) return;
-            if(!currentNovel.comments) currentNovel.comments = [];
-            currentNovel.comments.unshift({
-                author: userProfile.name || "Reader",
-                text: textInput.value.trim(),
-                date: new Date().toLocaleDateString()
-            });
-            const idx = novels.findIndex(n => n.id == currentNovel.id);
-            if(idx !== -1) novels[idx] = currentNovel;
-            saveToStorage();
-            openNovelDetail(currentNovel.id);
-        }
-
-        function deleteNovel(id) {
-            if(confirm("Are you sure you want to delete this novel?")) {
-                novels = novels.filter(n => n.id != id);
-                savedBookmarks = savedBookmarks.filter(bId => bId != id);
-                saveToStorage();
-                db.collection("publicNovels").doc(String(id)).delete().catch(err => console.log(err));
-                showToast("Novel deleted successfully.", "fa-trash");
-                switchView('profileView', true);
-            }
         }
 
         async function handlePublishNovel(e) {
             e.preventDefault();
             if (!currentUser) {
                 showToast("Please sign in before publishing stories.", "fa-triangle-exclamation");
-                const modal = document.getElementById('authModal');
-                if (modal) modal.style.display = 'flex';
+                document.getElementById('authModal').style.display = 'flex';
                 return;
             }
-
             if (!uploadedCoverDataUrl) {
                 showToast("Please select a book cover image.", "fa-triangle-exclamation");
                 return;
             }
 
-            showToast("Publishing novel to cloud...", "fa-cloud-arrow-up");
-
+            showToast("Publishing to cloud...", "fa-cloud-arrow-up");
             const novelId = Date.now().toString();
             const newNovel = {
                 id: novelId,
@@ -1302,22 +902,21 @@
                     number: 1,
                     title: document.getElementById('pubEpTitle').value,
                     content: document.getElementById('pubEpContent').value
-                }],
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                }]
             };
 
             try {
                 await db.collection("publicNovels").doc(novelId).set(newNovel);
                 novels.unshift(newNovel);
                 saveToStorage();
-                showToast("Novel published successfully to Explore feed!", "fa-circle-check");
+                showToast("Novel successfully published!", "fa-circle-check");
                 document.getElementById('publishForm').reset();
                 document.getElementById('coverPreview').style.display = 'none';
                 uploadedCoverDataUrl = "";
                 switchView('profileView', true);
-            } catch (error) {
-                console.error("Error publishing novel:", error);
-                showToast("Failed to publish novel. Storage or network error.", "fa-triangle-exclamation");
+            } catch (err) {
+                console.error("Publish error:", err);
+                showToast("Failed to publish. Check Firestore Rules.", "fa-triangle-exclamation");
             }
         }
 
@@ -1331,29 +930,17 @@
                 title: document.getElementById('newChapTitle').value,
                 content: document.getElementById('newChapContent').value
             });
-            const idx = novels.findIndex(n => n.id == currentNovel.id);
-            if(idx !== -1) novels[idx] = currentNovel;
             saveToStorage();
-
             try {
-                await db.collection("publicNovels").doc(String(currentNovel.id)).update({
-                    chapters: currentNovel.chapters
-                });
-            } catch (err) {
-                console.log("Cloud chapter update error:", err);
-            }
-
+                await db.collection("publicNovels").doc(String(currentNovel.id)).update({ chapters: currentNovel.chapters });
+            } catch(e) { console.log(e); }
             closeAddChapterModal();
-            document.getElementById('newChapTitle').value = '';
-            document.getElementById('newChapContent').value = '';
-            showToast("Chapter added successfully!", "fa-circle-check");
+            showToast("Chapter added!", "fa-circle-check");
             openNovelDetail(currentNovel.id);
         }
 
         function startReading(idx) {
             currentChapterIdx = idx;
-            readingProgress = { novelId: currentNovel.id, chapterIdx: idx };
-            saveToStorage();
             document.getElementById('readerModal').classList.add('active');
             updateReader();
         }
@@ -1362,10 +949,7 @@
             const ch = currentNovel.chapters[currentChapterIdx];
             document.getElementById('readerHeaderTitle').innerText = ch.title;
             document.getElementById('chapterIndicator').innerText = `Chapter ${currentChapterIdx + 1} of ${currentNovel.chapters.length}`;
-            const readerContainer = document.getElementById('readerText');
-            readerContainer.innerHTML = `<h2>${ch.title}</h2><div style="white-space: pre-wrap; line-height: 1.8;">${ch.content}</div>`;
-            readerContainer.style.textAlign = currentNovel.alignment || 'ltr';
-            readerContainer.dir = currentNovel.alignment === 'rtl' ? 'rtl' : 'ltr';
+            document.getElementById('readerText').innerHTML = `<h2>${ch.title}</h2><div style="white-space: pre-wrap; line-height: 1.8;">${ch.content}</div>`;
         }
 
         function setReaderTheme(theme) {
@@ -1379,51 +963,47 @@
         }
 
         function closeReader() { document.getElementById('readerModal').classList.remove('active'); }
-        function nextChapter() { if(currentChapterIdx < currentNovel.chapters.length - 1) { currentChapterIdx++; readingProgress.chapterIdx = currentChapterIdx; saveToStorage(); updateReader(); } }
-        function prevChapter() { if(currentChapterIdx > 0) { currentChapterIdx--; readingProgress.chapterIdx = currentChapterIdx; saveToStorage(); updateReader(); } }
+        function nextChapter() { if(currentChapterIdx < currentNovel.chapters.length - 1) { currentChapterIdx++; updateReader(); } }
+        function prevChapter() { if(currentChapterIdx > 0) { currentChapterIdx--; updateReader(); } }
 
         function toggleBookmark(id) {
             if(savedBookmarks.includes(id)) {
                 savedBookmarks = savedBookmarks.filter(b => b != id);
-                showToast("Removed from library.", "fa-bookmark");
+                showToast("Removed from bookmarks.", "fa-bookmark");
             } else {
                 savedBookmarks.push(id);
-                showToast("Added to library!", "fa-bookmark");
+                showToast("Saved to bookmarks!", "fa-bookmark");
             }
             saveToStorage();
-            updateProfileUI();
             openNovelDetail(id);
         }
 
         function renderLibrary() {
-            const bookmarked = novels.filter(n => savedBookmarks.includes(n.id));
-            renderGrid(bookmarked, 'libraryGrid');
+            renderGrid(novels.filter(n => savedBookmarks.includes(n.id)), 'libraryGrid');
         }
 
         function renderProfileBooks() {
             updateProfileUI();
             if (!userProfile.name) {
-                document.getElementById('myPublishedGrid').innerHTML = `<p style="color: var(--text-muted); grid-column: 1/-1;">Sign in to view your published stories.</p>`;
+                document.getElementById('myPublishedGrid').innerHTML = `<p style="color: var(--text-muted); grid-column: 1/-1;">Sign in to view your books.</p>`;
                 return;
             }
-            const currentName = userProfile.name.trim().toLowerCase();
-            const myBooks = novels.filter(n => (n.author || "").trim().toLowerCase() === currentName);
+            const myBooks = novels.filter(n => (n.author || "").trim().toLowerCase() === userProfile.name.trim().toLowerCase());
             renderGrid(myBooks, 'myPublishedGrid');
         }
 
-        updateProfileUI();
-        const lastView = localStorage.getItem('pocket_last_view') || 'exploreView';
-        switchView(lastView);
-    </script>
+        function saveToStorage() {
+            localStorage.setItem('pocket_novels', JSON.stringify(novels));
+            localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks));
+            if (userProfile.name) {
+                authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl };
+                localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
+                localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
+            }
+        }
 
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js')
-            .then(() => console.log('Service Worker registered successfully'))
-            .catch(err => console.log('Service Worker registration failed:', err));
-        });
-      }
+        updateProfileUI();
+        switchView(localStorage.getItem('pocket_last_view') || 'exploreView');
     </script>
 </body>
 </html>
