@@ -544,7 +544,6 @@
               localStorage.setItem('pocket_novels', JSON.stringify(novels));
             }
 
-            // Sync author profiles from cloud collection
             const authorsSnapshot = await db.collection("authorsDirectory").get();
             if (!authorsSnapshot.empty) {
               authorsSnapshot.forEach(doc => {
@@ -745,7 +744,6 @@
             toggleEditProfile();
 
             if (currentUser) {
-                // Save profile to user private data and public authorsDirectory for global visibility
                 await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
                 await db.collection("authorsDirectory").doc(userProfile.name).set({
                     bio: userProfile.bio,
@@ -822,7 +820,6 @@
         async function openAuthorProfile(authorName) {
             document.getElementById('publicAuthorName').innerText = authorName;
             
-            // Fetch author profile from Firestore or local cache
             let authorBioData = authorBios[authorName];
             if (!authorBioData) {
                 try {
@@ -898,6 +895,7 @@
                 <div style="display: flex; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap;">
                     <button class="btn" onclick="startReading(0)"><i class="fa-solid fa-book-open"></i> Read</button>
                     <button class="btn btn-secondary" onclick="toggleBookmark('${currentNovel.id}')"><i class="fa-solid fa-bookmark"></i> ${isBookmarked ? 'Bookmarked' : 'Bookmark'}</button>
+                    <button class="btn btn-secondary" onclick="shareNovel('${currentNovel.title}', '${currentNovel.author}')"><i class="fa-solid fa-share-nodes"></i> Share</button>
                     ${isAuthor ? `<button class="btn btn-success" onclick="openAddChapterModal()"><i class="fa-solid fa-plus"></i> Add Chapter</button><button class="btn btn-danger" onclick="deleteNovel('${currentNovel.id}')"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
                 </div>
 
@@ -922,6 +920,20 @@
                 </div>
             `;
             switchView('detailView');
+        }
+
+        function shareNovel(title, author) {
+            const shareData = {
+                title: title,
+                text: `Check out "${title}" by ${author} on Pocket Novels!`,
+                url: window.location.href
+            };
+            if (navigator.share) {
+                navigator.share(shareData).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(window.location.href);
+                showToast("Novel link copied to clipboard!", "fa-circle-check");
+            }
         }
 
         async function handleAddComment(e) {
