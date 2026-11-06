@@ -544,7 +544,7 @@
 
         applyFilters();
 
-        // INSTANT REAL-TIME CLOUD LISTENER (Optimized with loader spinner)
+        // INSTANT REAL-TIME CLOUD LISTENER (Optimized for instant multi-author updates)
         function initRealtimeSync() {
           const grid = document.getElementById('novelGrid');
           if (grid && novels.length === 0) {
@@ -793,6 +793,7 @@
             if (currentUser) {
                 try {
                     await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
+                    // CRITICAL FIX: Ensure authorsDirectory doc ID matches the exact pen name string
                     await db.collection("authorsDirectory").doc(userProfile.name).set({
                         bio: userProfile.bio,
                         picture: userProfile.picture,
@@ -892,7 +893,7 @@
             const novel = novels.find(n => n.id == novelId);
             if (!novel) return;
 
-            const authorName = novel.author || "Unknown Author";
+            const authorName = (novel.author || "Unknown Author").trim();
             
             let bioText = novel.authorBio || authorBios[authorName]?.bio || "";
             let picUrl = novel.authorPic || authorBios[authorName]?.picture || "";
@@ -927,7 +928,7 @@
                 socialDisplay.innerHTML = '';
             }
 
-            const authorBooks = novels.filter(n => (n.author || "").trim().toLowerCase() === authorName.trim().toLowerCase());
+            const authorBooks = novels.filter(n => (n.author || "").trim().toLowerCase() === authorName.toLowerCase());
             renderGrid(authorBooks, 'publicAuthorBooksGrid');
             switchView('authorPublicView');
         }
@@ -1103,7 +1104,16 @@
             };
 
             try {
+                // Save novel to publicNovels
                 await db.collection("publicNovels").doc(novelId).set(newNovel);
+                
+                // CRITICAL FIX: Ensure author profile is saved in authorsDirectory with authorName as document ID
+                await db.collection("authorsDirectory").doc(authorName).set({
+                    bio: userProfile.bio || "",
+                    picture: userProfile.picture || "",
+                    facebookUrl: userProfile.facebookUrl || ""
+                }, { merge: true });
+
                 novels.unshift(newNovel);
                 saveToStorage();
                 showToast("Novel successfully published!", "fa-circle-check");
