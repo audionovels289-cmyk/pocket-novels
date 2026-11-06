@@ -544,13 +544,8 @@
 
         applyFilters();
 
-        // INSTANT REAL-TIME CLOUD LISTENER (Optimized for instant multi-author updates)
+        // REAL-TIME CLOUD SYNC (Prioritizes Firestore data immediately)
         function initRealtimeSync() {
-          const grid = document.getElementById('novelGrid');
-          if (grid && novels.length === 0) {
-              grid.innerHTML = `<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 2rem;"><i class="fa-solid fa-spinner fa-spin"></i> Connecting to cloud...</p>`;
-          }
-
           db.collection("publicNovels").onSnapshot(snapshot => {
               const cloudNovels = [];
               snapshot.forEach(doc => {
@@ -560,8 +555,10 @@
               if (cloudNovels.length > 0) {
                   cloudNovels.sort((a, b) => Number(b.id) - Number(a.id));
                   novels = cloudNovels;
-                  localStorage.setItem('pocket_novels', JSON.stringify(novels));
+              } else {
+                  novels = defaultSampleNovels;
               }
+              localStorage.setItem('pocket_novels', JSON.stringify(novels));
               
               applyFilters();
               if (typeof renderLibrary === 'function') renderLibrary();
@@ -595,6 +592,7 @@
           }
         }
 
+        // AUTH STATE CHANGE LISTENER (Instantly fetches profile upon login)
         firebase.auth().onAuthStateChanged(async (user) => {
             currentUser = user;
             const authBtn = document.getElementById('authBtn');
@@ -608,17 +606,17 @@
                         userProfile.bio = doc.data().bio || "";
                         userProfile.picture = doc.data().picture || user.photoURL || "";
                         userProfile.facebookUrl = doc.data().facebookUrl || "";
-                        localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
-                    } else if (userProfile.name) {
-                        await db.collection("users").doc(user.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
                     } else {
                         userProfile.name = user.displayName || user.email.split('@')[0];
                         userProfile.picture = user.photoURL || "";
-                        localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
+                        userProfile.bio = "";
+                        userProfile.facebookUrl = "";
+                        await db.collection("users").doc(user.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
                     }
                 } catch (e) {
                     if (!userProfile.name) userProfile.name = user.displayName || "Author";
                 }
+                localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
                 updateProfileUI();
                 renderProfileBooks();
             } else {
@@ -692,6 +690,8 @@
                 if (bioEl) bioEl.innerText = userProfile.bio || "No bio added yet.";
                 if (socialEl && userProfile.facebookUrl) {
                     socialEl.innerHTML = `<a href="${userProfile.facebookUrl}" target="_blank" style="color: #38bdf8; text-decoration: none;"><i class="fa-brands fa-facebook"></i> Facebook</a>`;
+                } else if (socialEl) {
+                    socialEl.innerHTML = '';
                 }
             }
             const picContainer = document.getElementById('profilePicContainer');
@@ -793,31 +793,11 @@
             if (currentUser) {
                 try {
                     await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
-                    // CRITICAL FIX: Ensure authorsDirectory doc ID matches the exact pen name string
                     await db.collection("authorsDirectory").doc(userProfile.name).set({
                         bio: userProfile.bio,
                         picture: userProfile.picture,
                         facebookUrl: userProfile.facebookUrl
                     }, { merge: true });
-
-                    const batch = db.batch();
-                    novels.forEach(n => {
-                        if (oldName && (n.author || "").trim().toLowerCase() === oldName.trim().toLowerCase()) {
-                            n.author = userProfile.name;
-                            n.authorBio = userProfile.bio;
-                            n.authorPic = userProfile.picture;
-                            n.authorFb = userProfile.facebookUrl;
-                            const docRef = db.collection("publicNovels").doc(String(n.id));
-                            batch.update(docRef, {
-                                author: userProfile.name,
-                                authorBio: userProfile.bio,
-                                authorPic: userProfile.picture,
-                                authorFb: userProfile.facebookUrl
-                            });
-                        }
-                    });
-                    await batch.commit();
-                    saveToStorage();
                 } catch(err) {
                     console.log("Cloud profile sync notice:", err);
                 }
@@ -1104,10 +1084,7 @@
             };
 
             try {
-                // Save novel to publicNovels
                 await db.collection("publicNovels").doc(novelId).set(newNovel);
-                
-                // CRITICAL FIX: Ensure author profile is saved in authorsDirectory with authorName as document ID
                 await db.collection("authorsDirectory").doc(authorName).set({
                     bio: userProfile.bio || "",
                     picture: userProfile.picture || "",
