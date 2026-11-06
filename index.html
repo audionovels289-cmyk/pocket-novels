@@ -544,18 +544,20 @@
 
         applyFilters();
 
-        // REAL-TIME FIRESTORE LISTENER (Instant sync across all writers & readers)
+        // ROBUST REAL-TIME CLOUD LISTENER (Forces instant updates without page refresh)
         function initRealtimeSync() {
           db.collection("publicNovels").onSnapshot(snapshot => {
               const cloudNovels = [];
               snapshot.forEach(doc => {
                   cloudNovels.push({ id: doc.id, ...doc.data() });
               });
+              
               if (cloudNovels.length > 0) {
                   cloudNovels.sort((a, b) => Number(b.id) - Number(a.id));
                   novels = cloudNovels;
                   localStorage.setItem('pocket_novels', JSON.stringify(novels));
               }
+              
               applyFilters();
               if (typeof renderLibrary === 'function') renderLibrary();
               if (typeof renderProfileBooks === 'function') renderProfileBooks();
@@ -1103,7 +1105,7 @@
                 document.getElementById('publishForm').reset();
                 document.getElementById('coverPreview').style.display = 'none';
                 uploadedCoverDataUrl = "";
-                switchView('profileView', true);
+                switchView('exploreView', true);
             } catch (err) {
                 console.error("Publish error:", err);
                 showToast("Failed to publish. Check Firestore Rules.", "fa-triangle-exclamation");
