@@ -544,7 +544,7 @@
 
         applyFilters();
 
-        // REAL-TIME CLOUD SYNC (Prioritizes Firestore data immediately)
+        // REAL-TIME CLOUD SYNC
         function initRealtimeSync() {
           db.collection("publicNovels").onSnapshot(snapshot => {
               const cloudNovels = [];
@@ -555,10 +555,10 @@
               if (cloudNovels.length > 0) {
                   cloudNovels.sort((a, b) => Number(b.id) - Number(a.id));
                   novels = cloudNovels;
-              } else {
-                  novels = defaultSampleNovels;
+                  try {
+                      localStorage.setItem('pocket_novels', JSON.stringify(novels));
+                  } catch(e) { console.log("Local storage full", e); }
               }
-              localStorage.setItem('pocket_novels', JSON.stringify(novels));
               
               applyFilters();
               if (typeof renderLibrary === 'function') renderLibrary();
@@ -571,7 +571,9 @@
               snapshot.forEach(doc => {
                   authorBios[doc.id] = doc.data();
               });
-              localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
+              try {
+                  localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
+              } catch(e) {}
           }, err => {
               console.log("Authors directory sync error:", err);
           });
@@ -582,43 +584,50 @@
         function saveToStorage() {
           if (novels && novels.length > 0) {
             novels.sort((a, b) => Number(b.id) - Number(a.id));
-            localStorage.setItem('pocket_novels', JSON.stringify(novels));
+            try { localStorage.setItem('pocket_novels', JSON.stringify(novels)); } catch(e){}
           }
-          localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks));
+          try { localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks)); } catch(e){}
           if (userProfile.name) {
               authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl };
-              localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
-              localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
+              try {
+                  localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
+                  localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
+              } catch(e){}
           }
         }
 
-        // AUTH STATE CHANGE LISTENER (Instantly fetches profile upon login)
+        // DIRECT AUTH SNAPSHOT LISTENER
         firebase.auth().onAuthStateChanged(async (user) => {
             currentUser = user;
             const authBtn = document.getElementById('authBtn');
 
             if (user) {
                 if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
-                try {
-                    const doc = await db.collection("users").doc(user.uid).collection("appData").doc("userProfile").get();
-                    if (doc.exists && doc.data().name) {
-                        userProfile.name = doc.data().name;
-                        userProfile.bio = doc.data().bio || "";
-                        userProfile.picture = doc.data().picture || user.photoURL || "";
-                        userProfile.facebookUrl = doc.data().facebookUrl || "";
-                    } else {
-                        userProfile.name = user.displayName || user.email.split('@')[0];
-                        userProfile.picture = user.photoURL || "";
-                        userProfile.bio = "";
-                        userProfile.facebookUrl = "";
-                        await db.collection("users").doc(user.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
-                    }
-                } catch (e) {
-                    if (!userProfile.name) userProfile.name = user.displayName || "Author";
-                }
-                localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
-                updateProfileUI();
-                renderProfileBooks();
+                
+                // Directly bind User Profile Listener
+                db.collection("users").doc(user.uid).collection("appData").doc("userProfile")
+                  .onSnapshot(doc => {
+                      if (doc.exists && doc.data().name) {
+                          userProfile.name = doc.data().name;
+                          userProfile.bio = doc.data().bio || "";
+                          userProfile.picture = doc.data().picture || user.photoURL || "";
+                          userProfile.facebookUrl = doc.data().facebookUrl || "";
+                      } else {
+                          userProfile.name = user.displayName || user.email.split('@')[0];
+                          userProfile.picture = user.photoURL || "";
+                          userProfile.bio = "";
+                          userProfile.facebookUrl = "";
+                          db.collection("users").doc(user.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
+                      }
+                      try { localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile)); } catch(e){}
+                      updateProfileUI();
+                      renderProfileBooks();
+                  }, err => {
+                      console.log("Profile sync fallback error:", err);
+                      userProfile.name = user.displayName || user.email.split('@')[0];
+                      updateProfileUI();
+                      renderProfileBooks();
+                  });
             } else {
                 if (authBtn) authBtn.innerHTML = `<i class="fa-solid fa-right-from-bracket"></i> Sign In`;
                 userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
@@ -817,7 +826,7 @@
             if(viewId === 'exploreView') applyFilters();
             if(viewId === 'libraryView') renderLibrary();
             if(viewId === 'profileView') renderProfileBooks();
-            if(saveState) localStorage.setItem('pocket_last_view', viewId);
+            if(saveState) try { localStorage.setItem('pocket_last_view', viewId); } catch(e){}
         }
 
         function filterByGenre(genre, element) {
@@ -1184,12 +1193,14 @@
 
         function saveToStorage() {
             novels.sort((a, b) => Number(b.id) - Number(a.id));
-            localStorage.setItem('pocket_novels', JSON.stringify(novels));
-            localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks));
+            try { localStorage.setItem('pocket_novels', JSON.stringify(novels)); } catch(e){}
+            try { localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks)); } catch(e){}
             if (userProfile.name) {
                 authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl };
-                localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
-                localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
+                try {
+                    localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
+                    localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
+                } catch(e){}
             }
         }
 
