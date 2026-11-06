@@ -544,42 +544,42 @@
 
         applyFilters();
 
-        async function initCloudData() {
-          try {
-            const snapshot = await db.collection("publicNovels").get();
-            if (!snapshot.empty) {
+        // INSTANT REAL-TIME CLOUD LISTENER (SYNCING ACROSS ALL BROWSERS)
+        function initCloudData() {
+          db.collection("publicNovels").onSnapshot(snapshot => {
               const cloudNovels = [];
               snapshot.forEach(doc => {
-                cloudNovels.push({ id: doc.id, ...doc.data() });
+                  cloudNovels.push({ id: doc.id, ...doc.data() });
               });
-              cloudNovels.sort((a, b) => Number(b.id) - Number(a.id));
-              novels = cloudNovels;
-              localStorage.setItem('pocket_novels', JSON.stringify(novels));
-            }
+              
+              if (cloudNovels.length > 0) {
+                  cloudNovels.sort((a, b) => Number(b.id) - Number(a.id));
+                  novels = cloudNovels;
+                  localStorage.setItem('pocket_novels', JSON.stringify(novels));
+              }
+              
+              applyFilters();
+              if (typeof renderLibrary === 'function') renderLibrary();
+              if (typeof renderProfileBooks === 'function') renderProfileBooks();
+          }, error => {
+              console.error("Cloud sync error:", error);
+          });
 
-            const authorsSnapshot = await db.collection("authorsDirectory").get();
-            if (!authorsSnapshot.empty) {
-              authorsSnapshot.forEach(doc => {
-                authorBios[doc.id] = doc.data();
+          db.collection("authorsDirectory").onSnapshot(snapshot => {
+              snapshot.forEach(doc => {
+                  authorBios[doc.id] = doc.data();
               });
               localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
-            }
-
-            if (typeof renderLibrary === 'function') renderLibrary();
-            if (typeof applyFilters === 'function') applyFilters();
-            if (typeof renderProfileBooks === 'function') renderProfileBooks();
-          } catch (error) {
-            console.error("Cloud sync notice:", error);
-          }
+          }, err => {
+              console.log("Authors directory sync error:", err);
+          });
         }
 
         initCloudData();
 
         function saveToStorage() {
-          if (novels && novels.length > 0) {
-            novels.sort((a, b) => Number(b.id) - Number(a.id));
-            localStorage.setItem('pocket_novels', JSON.stringify(novels));
-          }
+          novels.sort((a, b) => Number(b.id) - Number(a.id));
+          localStorage.setItem('pocket_novels', JSON.stringify(novels));
           localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks));
           if (userProfile.name) {
               authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl };
@@ -588,6 +588,7 @@
           }
         }
 
+        // PERSISTENT AUTH STATE CHANGE LISTENER WITH UID-BASED FETCH
         firebase.auth().onAuthStateChanged(async (user) => {
             currentUser = user;
             const authBtn = document.getElementById('authBtn');
@@ -595,25 +596,35 @@
             if (user) {
                 if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
                 try {
-                    const doc = await db.collection("users").doc(user.uid).collection("appData").doc("userProfile").get();
+                    const docRef = db.collection("users").doc(user.uid).collection("appData").doc("userProfile");
+                    const doc = await docRef.get();
                     if (doc.exists && doc.data().name) {
-                        userProfile.name = doc.data().name;
-                        userProfile.bio = doc.data().bio || "";
-                        userProfile.picture = doc.data().picture || user.photoURL || "";
-                        userProfile.facebookUrl = doc.data().facebookUrl || "";
-                    } else if (!userProfile.name) {
+                        userProfile = doc.data();
+                    } else {
+                        userProfile = {
+                            name: user.displayName || user.email.split('@')[0],
+                            bio: "",
+                            picture: user.photoURL || "",
+                            facebookUrl: ""
+                        };
+                        await docRef.set(userProfile, { merge: true });
+                    }
+                } catch (e) {
+                    console.log("Profile fetch notice:", e);
+                    if (!userProfile.name) {
                         userProfile.name = user.displayName || user.email.split('@')[0];
                         userProfile.picture = user.photoURL || "";
                     }
-                } catch (e) {
-                    if (!userProfile.name) userProfile.name = user.displayName || "Author";
                 }
+                saveToStorage();
                 updateProfileUI();
                 renderProfileBooks();
             } else {
                 if (authBtn) authBtn.innerHTML = `<i class="fa-solid fa-right-from-bracket"></i> Sign In`;
                 userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
+                localStorage.removeItem('pocket_user_profile');
                 updateProfileUI();
+                renderProfileBooks();
             }
         });
 
@@ -660,6 +671,7 @@
                 localStorage.removeItem('pocket_user_profile');
                 userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
                 updateProfileUI();
+                renderProfileBooks();
                 showToast("Signed out.", "fa-circle-info");
             });
         }
@@ -678,6 +690,8 @@
                 if (bioEl) bioEl.innerText = userProfile.bio || "No bio added yet.";
                 if (socialEl && userProfile.facebookUrl) {
                     socialEl.innerHTML = `<a href="${userProfile.facebookUrl}" target="_blank" style="color: #38bdf8; text-decoration: none;"><i class="fa-brands fa-facebook"></i> Facebook</a>`;
+                } else if (socialEl) {
+                    socialEl.innerHTML = '';
                 }
             }
             const picContainer = document.getElementById('profilePicContainer');
@@ -1184,17 +1198,6 @@
             });
 
             renderGrid(myBooks, 'myPublishedGrid');
-        }
-
-        function saveToStorage() {
-            novels.sort((a, b) => Number(b.id) - Number(a.id));
-            localStorage.setItem('pocket_novels', JSON.stringify(novels));
-            localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks));
-            if (userProfile.name) {
-                authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl };
-                localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
-                localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
-            }
         }
 
         updateProfileUI();
