@@ -541,7 +541,6 @@
             const cachedProfile = localStorage.getItem('pocket_user_profile');
             if (cachedProfile) userProfile = JSON.parse(cachedProfile);
         } catch (e) {
-            console.warn("Storage cleared due to corruption/quota limits.");
             localStorage.clear();
         }
 
@@ -557,7 +556,7 @@
 
         applyFilters();
 
-        // RESILIENT REAL-TIME CLOUD LISTENER
+        // REAL-TIME CLOUD LISTENER FOR EXPLORE FEED
         function initRealtimeSync() {
           db.collection("publicNovels").onSnapshot(snapshot => {
               const cloudNovels = [];
@@ -602,12 +601,10 @@
                   localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
                   localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
               }
-          } catch(e) {
-              console.warn("Local storage write prevented (quota exceeded).");
-          }
+          } catch(e) {}
         }
 
-        // ROBUST AUTH STATE LISTENER
+        // AUTH STATE CHANGE LISTENER
         firebase.auth().onAuthStateChanged(async (user) => {
             currentUser = user;
             const authBtn = document.getElementById('authBtn');
@@ -633,7 +630,6 @@
                       updateProfileUI();
                       renderProfileBooks();
                   }, err => {
-                      console.log("Profile fetch fallback:", err);
                       userProfile.name = user.displayName || user.email.split('@')[0];
                       updateProfileUI();
                       renderProfileBooks();
