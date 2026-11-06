@@ -136,7 +136,6 @@
         .auth-action-btn.secondary { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
         .auth-action-btn.secondary:hover { background: #30363d; }
 
-        /* Custom In-App Dark Theme Dialog Modal */
         #customModalOverlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px);
@@ -154,7 +153,6 @@
         .custom-modal-text { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
         .custom-modal-buttons { display: flex; gap: 10px; justify-content: center; }
 
-        /* Custom In-App Toast Notification */
         #appToast {
             position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
             background: #1e293b; color: #f8fafc; border: 1px solid var(--primary-light);
@@ -165,7 +163,6 @@
         #appToast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
         #appToast i { color: var(--primary-light); font-size: 1.1rem; }
 
-        /* Modern Wattpad-style Compact Novel Grid */
         #novelGrid, #libraryGrid, .novels-grid, .novel-list, #myPublishedGrid, #publicAuthorBooksGrid {
             display: grid !important;
             grid-template-columns: repeat(2, 1fr) !important;
@@ -198,7 +195,6 @@
         body, html { overflow-x: hidden !important; max-width: 100vw !important; }
     </style>
 
-    <!-- Firebase SDK Compatibility Scripts -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -218,10 +214,8 @@
 </head>
 <body>
 
-    <!-- Custom In-App Toast Popup Element -->
     <div id="appToast"><i class="fa-solid fa-circle-info" id="toastIcon"></i><span id="toastMessage">Notification message</span></div>
 
-    <!-- Custom In-App Dark Theme Dialog Modal -->
     <div id="customModalOverlay">
         <div class="custom-modal-box">
             <div class="custom-modal-title" id="customModalTitle">Confirmation</div>
@@ -258,7 +252,6 @@
     </header>
 
     <main>
-        <!-- EXPLORE VIEW -->
         <section id="exploreView" class="view-section active">
             <div id="continueReadingContainer"></div>
 
@@ -274,19 +267,16 @@
             <div class="novel-grid" id="novelGrid"></div>
         </section>
 
-        <!-- NOVEL DETAIL VIEW -->
         <section id="detailView" class="view-section">
             <button class="btn btn-secondary" onclick="switchView('exploreView', true)" style="margin-bottom: 1.5rem;"><i class="fa-solid fa-arrow-left"></i> Back</button>
             <div id="detailContainer"></div>
         </section>
 
-        <!-- LIBRARY VIEW -->
         <section id="libraryView" class="view-section">
             <h2>Your Bookmarks</h2>
             <div class="novel-grid" id="libraryGrid"></div>
         </section>
 
-        <!-- PUBLISH VIEW -->
         <section id="studioView" class="view-section">
             <div class="studio-card">
                 <h2><i class="fa-solid fa-pen-fancy"></i> Writer's Studio</h2>
@@ -341,7 +331,6 @@
             </div>
         </section>
 
-        <!-- MY PROFILE VIEW -->
         <section id="profileView" class="view-section">
             <div class="profile-card">
                 <div class="profile-pic" id="profilePicContainer"><span>ME</span></div>
@@ -354,7 +343,6 @@
                 </div>
             </div>
 
-            <!-- EDIT PROFILE CARD -->
             <div class="studio-card" id="editProfileCard" style="display: none; margin-bottom: 2rem;">
                 <h3>Edit Author Profile</h3>
                 <form id="editProfileForm" onsubmit="handleSaveProfile(event)" style="margin-top: 1rem;">
@@ -390,7 +378,6 @@
             <div class="novel-grid" id="myPublishedGrid"></div>
         </section>
 
-        <!-- PUBLIC AUTHOR PROFILE VIEW -->
         <section id="authorPublicView" class="view-section">
             <button class="btn btn-secondary" onclick="switchView('exploreView', true)" style="margin-bottom: 1.5rem;"><i class="fa-solid fa-arrow-left"></i> Back</button>
             <div class="profile-card">
@@ -406,7 +393,6 @@
         </section>
     </main>
 
-    <!-- ADD CHAPTER MODAL -->
     <div class="reader-container" id="addChapterModal" style="background: rgba(15, 23, 42, 0.95); justify-content: center; align-items: center;">
         <div class="studio-card" style="width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;">
             <h3><i class="fa-solid fa-folder-plus"></i> Add New Chapter</h3>
@@ -427,7 +413,6 @@
         </div>
     </div>
 
-    <!-- READER MODAL -->
     <div class="reader-container" id="readerModal">
         <div class="reader-header">
             <button class="btn btn-secondary" onclick="closeReader()"><i class="fa-solid fa-xmark"></i></button>
@@ -448,7 +433,6 @@
         </div>
     </div>
 
-    <!-- Professional Auth Modal Overlay -->
     <div id="authModal" class="auth-modal-overlay" style="display: none;">
       <div class="auth-modal-content">
         <div class="auth-modal-header">
@@ -538,7 +522,6 @@
 
         let cachedNovels = localStorage.getItem('pocket_novels');
         let novels = (cachedNovels && JSON.parse(cachedNovels).length > 0) ? JSON.parse(cachedNovels) : defaultSampleNovels;
-
         novels.sort((a, b) => Number(b.id) - Number(a.id));
 
         let savedBookmarks = JSON.parse(localStorage.getItem('pocket_bookmarks')) || [];
@@ -618,12 +601,12 @@
                         userProfile.bio = doc.data().bio || "";
                         userProfile.picture = doc.data().picture || user.photoURL || "";
                         userProfile.facebookUrl = doc.data().facebookUrl || "";
-                    } else {
+                    } else if (!userProfile.name) {
                         userProfile.name = user.displayName || user.email.split('@')[0];
                         userProfile.picture = user.photoURL || "";
                     }
                 } catch (e) {
-                    userProfile.name = user.displayName || "Author";
+                    if (!userProfile.name) userProfile.name = user.displayName || "Author";
                 }
                 updateProfileUI();
                 renderProfileBooks();
@@ -781,6 +764,7 @@
 
         async function handleSaveProfile(e) {
             e.preventDefault();
+            const oldName = userProfile.name;
             userProfile.name = document.getElementById('editNameInput').value.trim();
             userProfile.bio = document.getElementById('editBioInput').value;
             userProfile.facebookUrl = document.getElementById('editSocialInput').value.trim();
@@ -801,16 +785,24 @@
                         facebookUrl: userProfile.facebookUrl
                     }, { merge: true });
 
-                    const snapshot = await db.collection("publicNovels").where("author", "==", userProfile.name).get();
                     const batch = db.batch();
-                    snapshot.forEach(docSnap => {
-                        batch.update(docSnap.ref, {
-                            authorBio: userProfile.bio,
-                            authorPic: userProfile.picture,
-                            authorFb: userProfile.facebookUrl
-                        });
+                    novels.forEach(n => {
+                        if ((n.author || "").trim().toLowerCase() === oldName.trim().toLowerCase() || (currentUser.displayName && (n.author || "").trim().toLowerCase() === currentUser.displayName.trim().toLowerCase())) {
+                            n.author = userProfile.name;
+                            n.authorBio = userProfile.bio;
+                            n.authorPic = userProfile.picture;
+                            n.authorFb = userProfile.facebookUrl;
+                            const docRef = db.collection("publicNovels").doc(String(n.id));
+                            batch.update(docRef, {
+                                author: userProfile.name,
+                                authorBio: userProfile.bio,
+                                authorPic: userProfile.picture,
+                                authorFb: userProfile.facebookUrl
+                            });
+                        }
                     });
                     await batch.commit();
+                    saveToStorage();
                 } catch(err) {
                     console.log("Cloud profile sync notice:", err);
                 }
@@ -859,7 +851,7 @@
             const grid = document.getElementById(targetContainerId);
             if(!grid) return;
             if(dataset.length === 0) {
-                grid.innerHTML = `<p style="color: var(--text-muted); grid-icon: 1/-1;">No novels found.</p>`;
+                grid.innerHTML = `<p style="color: var(--text-muted); grid-column: 1/-1;">No novels found.</p>`;
                 return;
             }
             grid.innerHTML = dataset.map(n => `
@@ -934,7 +926,7 @@
 
             try {
                 let updatePayload = { views: currentNovel.views };
-                if (currentUser && (currentNovel.author || "").trim().toLowerCase() === (userProfile.name || "").trim().toLowerCase()) {
+                if (currentUser && userProfile.name && (currentNovel.author || "").trim().toLowerCase() === userProfile.name.trim().toLowerCase()) {
                     if (userProfile.bio) updatePayload.authorBio = userProfile.bio;
                     if (userProfile.picture) updatePayload.authorPic = userProfile.picture;
                     if (userProfile.facebookUrl) updatePayload.authorFb = userProfile.facebookUrl;
@@ -946,7 +938,7 @@
 
             const container = document.getElementById('detailContainer');
             const isBookmarked = savedBookmarks.includes(id);
-            const isAuthor = currentUser && (currentNovel.author || "").trim().toLowerCase() === (userProfile.name || "").trim().toLowerCase();
+            const isAuthor = currentUser && userProfile.name && (currentNovel.author || "").trim().toLowerCase() === userProfile.name.trim().toLowerCase();
 
             const commentsHtml = (currentNovel.comments || []).map(c => `
                 <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 15px; margin-bottom: 10px;">
@@ -1072,10 +1064,12 @@
 
             showToast("Publishing to cloud...", "fa-cloud-arrow-up");
             const novelId = Date.now().toString();
+            const authorName = userProfile.name || currentUser.displayName || "Author";
+            
             const newNovel = {
                 id: novelId,
                 title: document.getElementById('pubTitle').value,
-                author: userProfile.name || currentUser.displayName || "Author",
+                author: authorName,
                 authorBio: userProfile.bio || "",
                 authorPic: userProfile.picture || "",
                 authorFb: userProfile.facebookUrl || "",
@@ -1181,7 +1175,14 @@
                 document.getElementById('myPublishedGrid').innerHTML = `<p style="color: var(--text-muted); grid-column: 1/-1;">Sign in to view your books.</p>`;
                 return;
             }
-            const myBooks = novels.filter(n => (n.author || "").trim().toLowerCase() === userProfile.name.trim().toLowerCase());
+            const currentPenName = userProfile.name.trim().toLowerCase();
+            const googleDisplayName = currentUser && currentUser.displayName ? currentUser.displayName.trim().toLowerCase() : "";
+
+            const myBooks = novels.filter(n => {
+                const novelAuthor = (n.author || "").trim().toLowerCase();
+                return novelAuthor === currentPenName || (googleDisplayName && novelAuthor === googleDisplayName);
+            });
+
             renderGrid(myBooks, 'myPublishedGrid');
         }
 
