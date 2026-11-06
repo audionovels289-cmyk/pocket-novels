@@ -520,19 +520,32 @@
             }
         ];
 
-        let cachedNovels = localStorage.getItem('pocket_novels');
-        let novels = (cachedNovels && JSON.parse(cachedNovels).length > 0) ? JSON.parse(cachedNovels) : defaultSampleNovels;
-        novels.sort((a, b) => Number(b.id) - Number(a.id));
-
-        let savedBookmarks = JSON.parse(localStorage.getItem('pocket_bookmarks')) || [];
-        let authorBios = JSON.parse(localStorage.getItem('pocket_author_bios')) || {};
+        let novels = defaultSampleNovels;
+        let savedBookmarks = [];
+        let authorBios = {};
         
-        let userProfile = JSON.parse(localStorage.getItem('pocket_user_profile')) || {
+        let userProfile = {
             name: "",
             bio: "",
             picture: "",
             facebookUrl: ""
         };
+
+        try {
+            const cachedNovels = localStorage.getItem('pocket_novels');
+            if (cachedNovels) novels = JSON.parse(cachedNovels);
+            const cachedBookmarks = localStorage.getItem('pocket_bookmarks');
+            if (cachedBookmarks) savedBookmarks = JSON.parse(cachedBookmarks);
+            const cachedBios = localStorage.getItem('pocket_author_bios');
+            if (cachedBios) authorBios = JSON.parse(cachedBios);
+            const cachedProfile = localStorage.getItem('pocket_user_profile');
+            if (cachedProfile) userProfile = JSON.parse(cachedProfile);
+        } catch (e) {
+            console.warn("Storage cleared due to corruption/quota limits.");
+            localStorage.clear();
+        }
+
+        novels.sort((a, b) => Number(b.id) - Number(a.id));
 
         let currentGenreFilter = 'All';
         let uploadedCoverDataUrl = "";
@@ -544,7 +557,7 @@
 
         applyFilters();
 
-        // REAL-TIME CLOUD SYNC
+        // RESILIENT REAL-TIME CLOUD LISTENER
         function initRealtimeSync() {
           db.collection("publicNovels").onSnapshot(snapshot => {
               const cloudNovels = [];
@@ -555,9 +568,7 @@
               if (cloudNovels.length > 0) {
                   cloudNovels.sort((a, b) => Number(b.id) - Number(a.id));
                   novels = cloudNovels;
-                  try {
-                      localStorage.setItem('pocket_novels', JSON.stringify(novels));
-                  } catch(e) { console.log("Local storage full", e); }
+                  try { localStorage.setItem('pocket_novels', JSON.stringify(novels)); } catch(e){}
               }
               
               applyFilters();
@@ -571,9 +582,7 @@
               snapshot.forEach(doc => {
                   authorBios[doc.id] = doc.data();
               });
-              try {
-                  localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
-              } catch(e) {}
+              try { localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios)); } catch(e){}
           }, err => {
               console.log("Authors directory sync error:", err);
           });
@@ -582,21 +591,23 @@
         initRealtimeSync();
 
         function saveToStorage() {
-          if (novels && novels.length > 0) {
-            novels.sort((a, b) => Number(b.id) - Number(a.id));
-            try { localStorage.setItem('pocket_novels', JSON.stringify(novels)); } catch(e){}
-          }
-          try { localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks)); } catch(e){}
-          if (userProfile.name) {
-              authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl };
-              try {
+          try {
+              if (novels && novels.length > 0) {
+                novels.sort((a, b) => Number(b.id) - Number(a.id));
+                localStorage.setItem('pocket_novels', JSON.stringify(novels));
+              }
+              localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks));
+              if (userProfile.name) {
+                  authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl };
                   localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
                   localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
-              } catch(e){}
+              }
+          } catch(e) {
+              console.warn("Local storage write prevented (quota exceeded).");
           }
         }
 
-        // DIRECT AUTH SNAPSHOT LISTENER
+        // ROBUST AUTH STATE LISTENER
         firebase.auth().onAuthStateChanged(async (user) => {
             currentUser = user;
             const authBtn = document.getElementById('authBtn');
@@ -604,7 +615,6 @@
             if (user) {
                 if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
                 
-                // Directly bind User Profile Listener
                 db.collection("users").doc(user.uid).collection("appData").doc("userProfile")
                   .onSnapshot(doc => {
                       if (doc.exists && doc.data().name) {
@@ -623,7 +633,7 @@
                       updateProfileUI();
                       renderProfileBooks();
                   }, err => {
-                      console.log("Profile sync fallback error:", err);
+                      console.log("Profile fetch fallback:", err);
                       userProfile.name = user.displayName || user.email.split('@')[0];
                       updateProfileUI();
                       renderProfileBooks();
@@ -631,7 +641,7 @@
             } else {
                 if (authBtn) authBtn.innerHTML = `<i class="fa-solid fa-right-from-bracket"></i> Sign In`;
                 userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
-                localStorage.removeItem('pocket_user_profile');
+                try { localStorage.removeItem('pocket_user_profile'); } catch(e){}
                 updateProfileUI();
                 renderProfileBooks();
             }
@@ -677,7 +687,7 @@
 
         function signOutUser() {
             firebase.auth().signOut().then(() => {
-                localStorage.removeItem('pocket_user_profile');
+                try { localStorage.removeItem('pocket_user_profile'); } catch(e){}
                 userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
                 updateProfileUI();
                 renderProfileBooks();
@@ -752,7 +762,7 @@
                         canvas.width = 300;
                         canvas.height = 400;
                         ctx.drawImage(img, 0, 0, 300, 400);
-                        uploadedCoverDataUrl = canvas.toDataURL('image/jpeg', 0.6);
+                        uploadedCoverDataUrl = canvas.toDataURL('image/jpeg', 0.5);
                         const preview = document.getElementById('coverPreview');
                         preview.src = uploadedCoverDataUrl;
                         preview.style.display = 'block';
@@ -775,7 +785,7 @@
                         canvas.width = 200;
                         canvas.height = 200;
                         ctx.drawImage(img, 0, 0, 200, 200);
-                        uploadedProfilePicUrl = canvas.toDataURL('image/jpeg', 0.7);
+                        uploadedProfilePicUrl = canvas.toDataURL('image/jpeg', 0.6);
                         const preview = document.getElementById('profilePicPreview');
                         preview.src = uploadedProfilePicUrl;
                         preview.style.display = 'block';
@@ -787,7 +797,6 @@
 
         async function handleSaveProfile(e) {
             e.preventDefault();
-            const oldName = userProfile.name;
             userProfile.name = document.getElementById('editNameInput').value.trim();
             userProfile.bio = document.getElementById('editBioInput').value;
             userProfile.facebookUrl = document.getElementById('editSocialInput').value.trim();
@@ -1189,19 +1198,6 @@
             const currentPenName = userProfile.name.trim().toLowerCase();
             const myBooks = novels.filter(n => (n.author || "").trim().toLowerCase() === currentPenName);
             renderGrid(myBooks, 'myPublishedGrid');
-        }
-
-        function saveToStorage() {
-            novels.sort((a, b) => Number(b.id) - Number(a.id));
-            try { localStorage.setItem('pocket_novels', JSON.stringify(novels)); } catch(e){}
-            try { localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks)); } catch(e){}
-            if (userProfile.name) {
-                authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl };
-                try {
-                    localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
-                    localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
-                } catch(e){}
-            }
         }
 
         updateProfileUI();
