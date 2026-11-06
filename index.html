@@ -544,35 +544,33 @@
 
         applyFilters();
 
-        // REAL-TIME CLOUD LISTENER (INSTANT SYNC ACROSS ALL USERS)
-        function initCloudData() {
-          db.collection("publicNovels").onSnapshot(snapshot => {
+        async function initCloudData() {
+          try {
+            const snapshot = await db.collection("publicNovels").get();
+            if (!snapshot.empty) {
               const cloudNovels = [];
               snapshot.forEach(doc => {
-                  cloudNovels.push({ id: doc.id, ...doc.data() });
+                cloudNovels.push({ id: doc.id, ...doc.data() });
               });
-              
-              if (cloudNovels.length > 0) {
-                  cloudNovels.sort((a, b) => Number(b.id) - Number(a.id));
-                  novels = cloudNovels;
-                  localStorage.setItem('pocket_novels', JSON.stringify(novels));
-              }
-              
-              applyFilters();
-              if (typeof renderLibrary === 'function') renderLibrary();
-              if (typeof renderProfileBooks === 'function') renderProfileBooks();
-          }, error => {
-              console.error("Cloud sync error:", error);
-          });
+              cloudNovels.sort((a, b) => Number(b.id) - Number(a.id));
+              novels = cloudNovels;
+              localStorage.setItem('pocket_novels', JSON.stringify(novels));
+            }
 
-          db.collection("authorsDirectory").onSnapshot(snapshot => {
-              snapshot.forEach(doc => {
-                  authorBios[doc.id] = doc.data();
+            const authorsSnapshot = await db.collection("authorsDirectory").get();
+            if (!authorsSnapshot.empty) {
+              authorsSnapshot.forEach(doc => {
+                authorBios[doc.id] = doc.data();
               });
               localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
-          }, err => {
-              console.log("Authors directory sync error:", err);
-          });
+            }
+
+            if (typeof renderLibrary === 'function') renderLibrary();
+            if (typeof applyFilters === 'function') applyFilters();
+            if (typeof renderProfileBooks === 'function') renderProfileBooks();
+          } catch (error) {
+            console.error("Cloud sync notice:", error);
+          }
         }
 
         initCloudData();
