@@ -588,7 +588,7 @@
           }
         }
 
-        // PERSISTENT AUTH STATE CHANGE LISTENER WITH UID-BASED FETCH
+        // PERSISTENT AUTH STATE CHANGE LISTENER WITH RELIABLE UID-BASED FETCH
         firebase.auth().onAuthStateChanged(async (user) => {
             currentUser = user;
             const authBtn = document.getElementById('authBtn');
@@ -601,6 +601,7 @@
                     if (doc.exists && doc.data().name) {
                         userProfile = doc.data();
                     } else {
+                        // Fallback to Google Auth metadata if no saved Firestore profile exists yet
                         userProfile = {
                             name: user.displayName || user.email.split('@')[0],
                             bio: "",
