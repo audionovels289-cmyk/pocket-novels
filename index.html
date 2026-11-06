@@ -520,31 +520,19 @@
             }
         ];
 
-        let novels = defaultSampleNovels;
-        let savedBookmarks = [];
-        let authorBios = {};
+        let cachedNovels = localStorage.getItem('pocket_novels');
+        let novels = (cachedNovels && JSON.parse(cachedNovels).length > 0) ? JSON.parse(cachedNovels) : defaultSampleNovels;
+        novels.sort((a, b) => Number(b.id) - Number(a.id));
+
+        let savedBookmarks = JSON.parse(localStorage.getItem('pocket_bookmarks')) || [];
+        let authorBios = JSON.parse(localStorage.getItem('pocket_author_bios')) || {};
         
-        let userProfile = {
+        let userProfile = JSON.parse(localStorage.getItem('pocket_user_profile')) || {
             name: "",
             bio: "",
             picture: "",
             facebookUrl: ""
         };
-
-        try {
-            const cachedNovels = localStorage.getItem('pocket_novels');
-            if (cachedNovels) novels = JSON.parse(cachedNovels);
-            const cachedBookmarks = localStorage.getItem('pocket_bookmarks');
-            if (cachedBookmarks) savedBookmarks = JSON.parse(cachedBookmarks);
-            const cachedBios = localStorage.getItem('pocket_author_bios');
-            if (cachedBios) authorBios = JSON.parse(cachedBios);
-            const cachedProfile = localStorage.getItem('pocket_user_profile');
-            if (cachedProfile) userProfile = JSON.parse(cachedProfile);
-        } catch (e) {
-            localStorage.clear();
-        }
-
-        novels.sort((a, b) => Number(b.id) - Number(a.id));
 
         let currentGenreFilter = 'All';
         let uploadedCoverDataUrl = "";
@@ -556,8 +544,8 @@
 
         applyFilters();
 
-        // REAL-TIME CLOUD LISTENER FOR EXPLORE FEED
-        function initRealtimeSync() {
+        // REAL-TIME CLOUD LISTENER (INSTANT SYNC ACROSS ALL USERS)
+        function initCloudData() {
           db.collection("publicNovels").onSnapshot(snapshot => {
               const cloudNovels = [];
               snapshot.forEach(doc => {
@@ -567,79 +555,67 @@
               if (cloudNovels.length > 0) {
                   cloudNovels.sort((a, b) => Number(b.id) - Number(a.id));
                   novels = cloudNovels;
-                  try { localStorage.setItem('pocket_novels', JSON.stringify(novels)); } catch(e){}
+                  localStorage.setItem('pocket_novels', JSON.stringify(novels));
               }
               
               applyFilters();
               if (typeof renderLibrary === 'function') renderLibrary();
               if (typeof renderProfileBooks === 'function') renderProfileBooks();
           }, error => {
-              console.error("Real-time sync error:", error);
+              console.error("Cloud sync error:", error);
           });
 
           db.collection("authorsDirectory").onSnapshot(snapshot => {
               snapshot.forEach(doc => {
                   authorBios[doc.id] = doc.data();
               });
-              try { localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios)); } catch(e){}
+              localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
           }, err => {
               console.log("Authors directory sync error:", err);
           });
         }
 
-        initRealtimeSync();
+        initCloudData();
 
         function saveToStorage() {
-          try {
-              if (novels && novels.length > 0) {
-                novels.sort((a, b) => Number(b.id) - Number(a.id));
-                localStorage.setItem('pocket_novels', JSON.stringify(novels));
-              }
-              localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks));
-              if (userProfile.name) {
-                  authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl };
-                  localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
-                  localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
-              }
-          } catch(e) {}
+          if (novels && novels.length > 0) {
+            novels.sort((a, b) => Number(b.id) - Number(a.id));
+            localStorage.setItem('pocket_novels', JSON.stringify(novels));
+          }
+          localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks));
+          if (userProfile.name) {
+              authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl };
+              localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
+              localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
+          }
         }
 
-        // AUTH STATE CHANGE LISTENER
         firebase.auth().onAuthStateChanged(async (user) => {
             currentUser = user;
             const authBtn = document.getElementById('authBtn');
 
             if (user) {
                 if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
-                
-                db.collection("users").doc(user.uid).collection("appData").doc("userProfile")
-                  .onSnapshot(doc => {
-                      if (doc.exists && doc.data().name) {
-                          userProfile.name = doc.data().name;
-                          userProfile.bio = doc.data().bio || "";
-                          userProfile.picture = doc.data().picture || user.photoURL || "";
-                          userProfile.facebookUrl = doc.data().facebookUrl || "";
-                      } else {
-                          userProfile.name = user.displayName || user.email.split('@')[0];
-                          userProfile.picture = user.photoURL || "";
-                          userProfile.bio = "";
-                          userProfile.facebookUrl = "";
-                          db.collection("users").doc(user.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
-                      }
-                      try { localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile)); } catch(e){}
-                      updateProfileUI();
-                      renderProfileBooks();
-                  }, err => {
-                      userProfile.name = user.displayName || user.email.split('@')[0];
-                      updateProfileUI();
-                      renderProfileBooks();
-                  });
+                try {
+                    const doc = await db.collection("users").doc(user.uid).collection("appData").doc("userProfile").get();
+                    if (doc.exists && doc.data().name) {
+                        userProfile.name = doc.data().name;
+                        userProfile.bio = doc.data().bio || "";
+                        userProfile.picture = doc.data().picture || user.photoURL || "";
+                        userProfile.facebookUrl = doc.data().facebookUrl || "";
+                    } else if (!userProfile.name) {
+                        userProfile.name = user.displayName || user.email.split('@')[0];
+                        userProfile.picture = user.photoURL || "";
+                    }
+                } catch (e) {
+                    if (!userProfile.name) userProfile.name = user.displayName || "Author";
+                }
+                updateProfileUI();
+                renderProfileBooks();
             } else {
                 if (authBtn) authBtn.innerHTML = `<i class="fa-solid fa-right-from-bracket"></i> Sign In`;
                 userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
-                try { localStorage.removeItem('pocket_user_profile'); } catch(e){}
                 updateProfileUI();
-                renderProfileBooks();
             }
         });
 
@@ -683,10 +659,9 @@
 
         function signOutUser() {
             firebase.auth().signOut().then(() => {
-                try { localStorage.removeItem('pocket_user_profile'); } catch(e){}
+                localStorage.removeItem('pocket_user_profile');
                 userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
                 updateProfileUI();
-                renderProfileBooks();
                 showToast("Signed out.", "fa-circle-info");
             });
         }
@@ -705,8 +680,6 @@
                 if (bioEl) bioEl.innerText = userProfile.bio || "No bio added yet.";
                 if (socialEl && userProfile.facebookUrl) {
                     socialEl.innerHTML = `<a href="${userProfile.facebookUrl}" target="_blank" style="color: #38bdf8; text-decoration: none;"><i class="fa-brands fa-facebook"></i> Facebook</a>`;
-                } else if (socialEl) {
-                    socialEl.innerHTML = '';
                 }
             }
             const picContainer = document.getElementById('profilePicContainer');
@@ -758,7 +731,7 @@
                         canvas.width = 300;
                         canvas.height = 400;
                         ctx.drawImage(img, 0, 0, 300, 400);
-                        uploadedCoverDataUrl = canvas.toDataURL('image/jpeg', 0.5);
+                        uploadedCoverDataUrl = canvas.toDataURL('image/jpeg', 0.6);
                         const preview = document.getElementById('coverPreview');
                         preview.src = uploadedCoverDataUrl;
                         preview.style.display = 'block';
@@ -781,7 +754,7 @@
                         canvas.width = 200;
                         canvas.height = 200;
                         ctx.drawImage(img, 0, 0, 200, 200);
-                        uploadedProfilePicUrl = canvas.toDataURL('image/jpeg', 0.6);
+                        uploadedProfilePicUrl = canvas.toDataURL('image/jpeg', 0.7);
                         const preview = document.getElementById('profilePicPreview');
                         preview.src = uploadedProfilePicUrl;
                         preview.style.display = 'block';
@@ -793,6 +766,7 @@
 
         async function handleSaveProfile(e) {
             e.preventDefault();
+            const oldName = userProfile.name;
             userProfile.name = document.getElementById('editNameInput').value.trim();
             userProfile.bio = document.getElementById('editBioInput').value;
             userProfile.facebookUrl = document.getElementById('editSocialInput').value.trim();
@@ -812,13 +786,31 @@
                         picture: userProfile.picture,
                         facebookUrl: userProfile.facebookUrl
                     }, { merge: true });
+
+                    const batch = db.batch();
+                    novels.forEach(n => {
+                        if ((n.author || "").trim().toLowerCase() === oldName.trim().toLowerCase() || (currentUser.displayName && (n.author || "").trim().toLowerCase() === currentUser.displayName.trim().toLowerCase())) {
+                            n.author = userProfile.name;
+                            n.authorBio = userProfile.bio;
+                            n.authorPic = userProfile.picture;
+                            n.authorFb = userProfile.facebookUrl;
+                            const docRef = db.collection("publicNovels").doc(String(n.id));
+                            batch.update(docRef, {
+                                author: userProfile.name,
+                                authorBio: userProfile.bio,
+                                authorPic: userProfile.picture,
+                                authorFb: userProfile.facebookUrl
+                            });
+                        }
+                    });
+                    await batch.commit();
+                    saveToStorage();
                 } catch(err) {
                     console.log("Cloud profile sync notice:", err);
                 }
             }
-            showToast("Profile updated globally!", "fa-circle-check");
+            showToast("Profile updated globally for readers!", "fa-circle-check");
             renderProfileBooks();
-            applyFilters();
         }
 
         function switchView(viewId, saveState = false) {
@@ -831,7 +823,7 @@
             if(viewId === 'exploreView') applyFilters();
             if(viewId === 'libraryView') renderLibrary();
             if(viewId === 'profileView') renderProfileBooks();
-            if(saveState) try { localStorage.setItem('pocket_last_view', viewId); } catch(e){}
+            if(saveState) localStorage.setItem('pocket_last_view', viewId);
         }
 
         function filterByGenre(genre, element) {
@@ -887,7 +879,7 @@
             const novel = novels.find(n => n.id == novelId);
             if (!novel) return;
 
-            const authorName = (novel.author || "Unknown Author").trim();
+            const authorName = novel.author || "Unknown Author";
             
             let bioText = novel.authorBio || authorBios[authorName]?.bio || "";
             let picUrl = novel.authorPic || authorBios[authorName]?.picture || "";
@@ -922,7 +914,7 @@
                 socialDisplay.innerHTML = '';
             }
 
-            const authorBooks = novels.filter(n => (n.author || "").trim().toLowerCase() === authorName.toLowerCase());
+            const authorBooks = novels.filter(n => (n.author || "").trim().toLowerCase() === authorName.trim().toLowerCase());
             renderGrid(authorBooks, 'publicAuthorBooksGrid');
             switchView('authorPublicView');
         }
@@ -1099,19 +1091,13 @@
 
             try {
                 await db.collection("publicNovels").doc(novelId).set(newNovel);
-                await db.collection("authorsDirectory").doc(authorName).set({
-                    bio: userProfile.bio || "",
-                    picture: userProfile.picture || "",
-                    facebookUrl: userProfile.facebookUrl || ""
-                }, { merge: true });
-
                 novels.unshift(newNovel);
                 saveToStorage();
                 showToast("Novel successfully published!", "fa-circle-check");
                 document.getElementById('publishForm').reset();
                 document.getElementById('coverPreview').style.display = 'none';
                 uploadedCoverDataUrl = "";
-                switchView('exploreView', true);
+                switchView('profileView', true);
             } catch (err) {
                 console.error("Publish error:", err);
                 showToast("Failed to publish. Check Firestore Rules.", "fa-triangle-exclamation");
@@ -1192,8 +1178,25 @@
                 return;
             }
             const currentPenName = userProfile.name.trim().toLowerCase();
-            const myBooks = novels.filter(n => (n.author || "").trim().toLowerCase() === currentPenName);
+            const googleDisplayName = currentUser && currentUser.displayName ? currentUser.displayName.trim().toLowerCase() : "";
+
+            const myBooks = novels.filter(n => {
+                const novelAuthor = (n.author || "").trim().toLowerCase();
+                return novelAuthor === currentPenName || (googleDisplayName && novelAuthor === googleDisplayName);
+            });
+
             renderGrid(myBooks, 'myPublishedGrid');
+        }
+
+        function saveToStorage() {
+            novels.sort((a, b) => Number(b.id) - Number(a.id));
+            localStorage.setItem('pocket_novels', JSON.stringify(novels));
+            localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks));
+            if (userProfile.name) {
+                authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl };
+                localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
+                localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
+            }
         }
 
         updateProfileUI();
