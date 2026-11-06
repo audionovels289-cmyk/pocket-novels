@@ -601,9 +601,14 @@
                         userProfile.bio = doc.data().bio || "";
                         userProfile.picture = doc.data().picture || user.photoURL || "";
                         userProfile.facebookUrl = doc.data().facebookUrl || "";
-                    } else if (!userProfile.name) {
+                        localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
+                    } else if (userProfile.name) {
+                        // Push local profile to cloud if missing
+                        await db.collection("users").doc(user.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
+                    } else {
                         userProfile.name = user.displayName || user.email.split('@')[0];
                         userProfile.picture = user.photoURL || "";
+                        localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
                     }
                 } catch (e) {
                     if (!userProfile.name) userProfile.name = user.displayName || "Author";
@@ -613,7 +618,9 @@
             } else {
                 if (authBtn) authBtn.innerHTML = `<i class="fa-solid fa-right-from-bracket"></i> Sign In`;
                 userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
+                localStorage.removeItem('pocket_user_profile');
                 updateProfileUI();
+                renderProfileBooks();
             }
         });
 
@@ -635,7 +642,7 @@
           const password = document.getElementById('authPasswordInput').value;
           if (!email || !password) { showToast("Enter email & password.", "fa-triangle-exclamation"); return; }
           firebase.auth().signInWithEmailAndPassword(email, password)
-            .then(() => { showToast("Signed in successfully!", "fa-circle-check"); closeAuthModal(); })
+            .then(() => { showToast("Signed in successfully!", "fa-circle-check"); closeAuthModal(); initCloudData(); })
             .catch(err => showToast(err.message, "fa-triangle-exclamation"));
         }
 
@@ -644,14 +651,14 @@
           const password = document.getElementById('authPasswordInput').value;
           if (!email || !password) { showToast("Enter email & password.", "fa-triangle-exclamation"); return; }
           firebase.auth().createUserWithEmailAndPassword(email, password)
-            .then(() => { showToast("Account created!", "fa-circle-check"); closeAuthModal(); })
+            .then(() => { showToast("Account created!", "fa-circle-check"); closeAuthModal(); initCloudData(); })
             .catch(err => showToast(err.message, "fa-triangle-exclamation"));
         }
 
         function signInWithGoogle() {
             const provider = new firebase.auth.GoogleAuthProvider();
             firebase.auth().signInWithPopup(provider)
-                .then(() => { showToast("Google Sign-In successful!", "fa-circle-check"); closeAuthModal(); })
+                .then(() => { showToast("Google Sign-In successful!", "fa-circle-check"); closeAuthModal(); initCloudData(); })
                 .catch(err => showToast(err.message, "fa-triangle-exclamation"));
         }
 
@@ -660,6 +667,7 @@
                 localStorage.removeItem('pocket_user_profile');
                 userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
                 updateProfileUI();
+                renderProfileBooks();
                 showToast("Signed out.", "fa-circle-info");
             });
         }
@@ -787,7 +795,7 @@
 
                     const batch = db.batch();
                     novels.forEach(n => {
-                        if ((n.author || "").trim().toLowerCase() === oldName.trim().toLowerCase() || (currentUser.displayName && (n.author || "").trim().toLowerCase() === currentUser.displayName.trim().toLowerCase())) {
+                        if (oldName && (n.author || "").trim().toLowerCase() === oldName.trim().toLowerCase()) {
                             n.author = userProfile.name;
                             n.authorBio = userProfile.bio;
                             n.authorPic = userProfile.picture;
@@ -807,8 +815,9 @@
                     console.log("Cloud profile sync notice:", err);
                 }
             }
-            showToast("Profile updated globally for readers!", "fa-circle-check");
+            showToast("Profile updated globally!", "fa-circle-check");
             renderProfileBooks();
+            applyFilters();
         }
 
         function switchView(viewId, saveState = false) {
@@ -818,7 +827,7 @@
             if(viewId === 'exploreView') document.getElementById('navExplore').classList.add('active');
             if(viewId === 'libraryView') document.getElementById('navLibrary').classList.add('active');
             if(viewId === 'studioView') document.getElementById('navStudio').classList.add('active');
-            if(viewId === 'exploreView') applyFilters();
+            if(viewId === 'exploreView') initCloudData().then(() => applyFilters());
             if(viewId === 'libraryView') renderLibrary();
             if(viewId === 'profileView') renderProfileBooks();
             if(saveState) localStorage.setItem('pocket_last_view', viewId);
@@ -1176,13 +1185,7 @@
                 return;
             }
             const currentPenName = userProfile.name.trim().toLowerCase();
-            const googleDisplayName = currentUser && currentUser.displayName ? currentUser.displayName.trim().toLowerCase() : "";
-
-            const myBooks = novels.filter(n => {
-                const novelAuthor = (n.author || "").trim().toLowerCase();
-                return novelAuthor === currentPenName || (googleDisplayName && novelAuthor === googleDisplayName);
-            });
-
+            const myBooks = novels.filter(n => (n.author || "").trim().toLowerCase() === currentPenName);
             renderGrid(myBooks, 'myPublishedGrid');
         }
 
