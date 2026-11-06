@@ -859,7 +859,7 @@
             const grid = document.getElementById(targetContainerId);
             if(!grid) return;
             if(dataset.length === 0) {
-                grid.innerHTML = `<p style="color: var(--text-muted); grid-column: 1/-1;">No novels found.</p>`;
+                grid.innerHTML = `<p style="color: var(--text-muted); grid-icon: 1/-1;">No novels found.</p>`;
                 return;
             }
             grid.innerHTML = dataset.map(n => `
@@ -1181,7 +1181,6 @@
                 document.getElementById('myPublishedGrid').innerHTML = `<p style="color: var(--text-muted); grid-column: 1/-1;">Sign in to view your books.</p>`;
                 return;
             }
-            // Filter all novels matching the signed-in author name securely
             const myBooks = novels.filter(n => (n.author || "").trim().toLowerCase() === userProfile.name.trim().toLowerCase());
             renderGrid(myBooks, 'myPublishedGrid');
         }
