@@ -544,8 +544,13 @@
 
         applyFilters();
 
-        // ROBUST REAL-TIME CLOUD LISTENER (Forces instant updates without page refresh)
+        // INSTANT REAL-TIME CLOUD LISTENER (Optimized with loader spinner)
         function initRealtimeSync() {
+          const grid = document.getElementById('novelGrid');
+          if (grid && novels.length === 0) {
+              grid.innerHTML = `<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 2rem;"><i class="fa-solid fa-spinner fa-spin"></i> Connecting to cloud...</p>`;
+          }
+
           db.collection("publicNovels").onSnapshot(snapshot => {
               const cloudNovels = [];
               snapshot.forEach(doc => {
