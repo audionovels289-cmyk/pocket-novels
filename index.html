@@ -357,7 +357,7 @@
             <!-- EDIT PROFILE CARD -->
             <div class="studio-card" id="editProfileCard" style="display: none; margin-bottom: 2rem;">
                 <h3>Edit Author Profile</h3>
-                <form onsubmit="handleSaveProfile(event)" style="margin-top: 1rem;">
+                <form id="editProfileForm" onsubmit="handleSaveProfile(event)" style="margin-top: 1rem;">
                     <div class="form-group">
                         <label>Author / Pen Name</label>
                         <input type="text" id="editNameInput" class="form-control" required>
@@ -539,6 +539,8 @@
         let cachedNovels = localStorage.getItem('pocket_novels');
         let novels = (cachedNovels && JSON.parse(cachedNovels).length > 0) ? JSON.parse(cachedNovels) : defaultSampleNovels;
 
+        novels.sort((a, b) => Number(b.id) - Number(a.id));
+
         let savedBookmarks = JSON.parse(localStorage.getItem('pocket_bookmarks')) || [];
         let authorBios = JSON.parse(localStorage.getItem('pocket_author_bios')) || {};
         
@@ -567,6 +569,7 @@
               snapshot.forEach(doc => {
                 cloudNovels.push({ id: doc.id, ...doc.data() });
               });
+              cloudNovels.sort((a, b) => Number(b.id) - Number(a.id));
               novels = cloudNovels;
               localStorage.setItem('pocket_novels', JSON.stringify(novels));
             }
@@ -590,6 +593,7 @@
 
         function saveToStorage() {
           if (novels && novels.length > 0) {
+            novels.sort((a, b) => Number(b.id) - Number(a.id));
             localStorage.setItem('pocket_novels', JSON.stringify(novels));
           }
           localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks));
@@ -716,6 +720,14 @@
                 document.getElementById('editNameInput').value = userProfile.name || "";
                 document.getElementById('editBioInput').value = userProfile.bio || "";
                 document.getElementById('editSocialInput').value = userProfile.facebookUrl || "";
+                uploadedProfilePicUrl = userProfile.picture || "";
+                const preview = document.getElementById('profilePicPreview');
+                if (uploadedProfilePicUrl) {
+                    preview.src = uploadedProfilePicUrl;
+                    preview.style.display = 'block';
+                } else {
+                    preview.style.display = 'none';
+                }
             }
             card.style.display = isOpening ? 'block' : 'none';
         }
@@ -748,10 +760,19 @@
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    uploadedProfilePicUrl = e.target.result;
-                    const preview = document.getElementById('profilePicPreview');
-                    preview.src = uploadedProfilePicUrl;
-                    preview.style.display = 'block';
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = 200;
+                        canvas.height = 200;
+                        ctx.drawImage(img, 0, 0, 200, 200);
+                        uploadedProfilePicUrl = canvas.toDataURL('image/jpeg', 0.7);
+                        const preview = document.getElementById('profilePicPreview');
+                        preview.src = uploadedProfilePicUrl;
+                        preview.style.display = 'block';
+                    }
                 };
                 reader.readAsDataURL(file);
             }
@@ -762,30 +783,36 @@
             userProfile.name = document.getElementById('editNameInput').value.trim();
             userProfile.bio = document.getElementById('editBioInput').value;
             userProfile.facebookUrl = document.getElementById('editSocialInput').value.trim();
-            if (uploadedProfilePicUrl) userProfile.picture = uploadedProfilePicUrl;
+            if (uploadedProfilePicUrl) {
+                userProfile.picture = uploadedProfilePicUrl;
+            }
 
             saveToStorage();
             updateProfileUI();
             toggleEditProfile();
 
             if (currentUser) {
-                await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
-                await db.collection("authorsDirectory").doc(userProfile.name).set({
-                    bio: userProfile.bio,
-                    picture: userProfile.picture,
-                    facebookUrl: userProfile.facebookUrl
-                }, { merge: true });
+                try {
+                    await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
+                    await db.collection("authorsDirectory").doc(userProfile.name).set({
+                        bio: userProfile.bio,
+                        picture: userProfile.picture,
+                        facebookUrl: userProfile.facebookUrl
+                    }, { merge: true });
 
-                const snapshot = await db.collection("publicNovels").where("author", "==", userProfile.name).get();
-                const batch = db.batch();
-                snapshot.forEach(docSnap => {
-                    batch.update(docSnap.ref, {
-                        authorBio: userProfile.bio,
-                        authorPic: userProfile.picture,
-                        authorFb: userProfile.facebookUrl
+                    const snapshot = await db.collection("publicNovels").where("author", "==", userProfile.name).get();
+                    const batch = db.batch();
+                    snapshot.forEach(docSnap => {
+                        batch.update(docSnap.ref, {
+                            authorBio: userProfile.bio,
+                            authorPic: userProfile.picture,
+                            authorFb: userProfile.facebookUrl
+                        });
                     });
-                });
-                await batch.commit();
+                    await batch.commit();
+                } catch(err) {
+                    console.log("Cloud profile sync notice:", err);
+                }
             }
             showToast("Profile updated globally for readers!", "fa-circle-check");
             renderProfileBooks();
@@ -1158,6 +1185,7 @@
         }
 
         function saveToStorage() {
+            novels.sort((a, b) => Number(b.id) - Number(a.id));
             localStorage.setItem('pocket_novels', JSON.stringify(novels));
             localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks));
             if (userProfile.name) {
