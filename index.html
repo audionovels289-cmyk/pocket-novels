@@ -326,7 +326,7 @@
                         <label>Chapter 1 Content</label>
                         <textarea id="pubEpContent" class="form-control" style="min-height: 180px;" placeholder="Write your chapter text here..." required></textarea>
                     </div>
-                    <button type="submit" class="btn"><i class="fa-solid fa-cloud-arrow-up"></i> Publish Now</button>
+                    <button type="submit" id="publishBtn" class="btn"><i class="fa-solid fa-cloud-arrow-up"></i> Publish Now</button>
                 </form>
             </div>
         </section>
@@ -527,20 +527,16 @@
         let savedBookmarks = JSON.parse(localStorage.getItem('pocket_bookmarks')) || [];
         let authorBios = JSON.parse(localStorage.getItem('pocket_author_bios')) || {};
         
-        let userProfile = JSON.parse(localStorage.getItem('pocket_user_profile')) || {
-            name: "",
-            bio: "",
-            picture: "",
-            facebookUrl: ""
-        };
+        let userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
 
         let currentGenreFilter = 'All';
         let uploadedCoverDataUrl = "";
-        let uploadedProfilePicUrl = userProfile.picture || "";
+        let uploadedProfilePicUrl = "";
         let currentNovel = null;
         let currentChapterIdx = 0;
         let currentFontSize = 18;
         let currentUser = null;
+        let isPublishing = false;
 
         applyFilters();
 
@@ -553,8 +549,11 @@
               });
               
               if (cloudNovels.length > 0) {
-                  cloudNovels.sort((a, b) => Number(b.id) - Number(a.id));
-                  novels = cloudNovels;
+                  // Deduplicate novels by ID to prevent double cards
+                  const uniqueMap = new Map();
+                  cloudNovels.forEach(n => uniqueMap.set(String(n.id), n));
+                  novels = Array.from(uniqueMap.values());
+                  novels.sort((a, b) => Number(b.id) - Number(a.id));
                   localStorage.setItem('pocket_novels', JSON.stringify(novels));
               }
               
@@ -581,14 +580,14 @@
           novels.sort((a, b) => Number(b.id) - Number(a.id));
           localStorage.setItem('pocket_novels', JSON.stringify(novels));
           localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks));
-          if (userProfile.name) {
+          if (userProfile.name && currentUser) {
               authorBios[userProfile.name] = { bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl };
               localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
-              localStorage.setItem('pocket_user_profile', JSON.stringify(userProfile));
+              localStorage.setItem('pocket_user_profile_' + currentUser.uid, JSON.stringify(userProfile));
           }
         }
 
-        // PERSISTENT AUTH STATE LISTENER (PRIORITIZES SAVED FIRESTORE PROFILE DATA)
+        // INSTANT & PERSISTENT AUTH STATE LISTENER WITH LOCAL STORAGE CACHING
         firebase.auth().onAuthStateChanged(async (user) => {
             currentUser = user;
             const authBtn = document.getElementById('authBtn');
@@ -596,20 +595,38 @@
             if (user) {
                 if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
                 
+                // 1. INSTANT LOAD FROM LOCAL CACHE SO NO "GUEST USER" DELAY OCCURS
+                const localCache = localStorage.getItem('pocket_user_profile_' + user.uid);
+                if (localCache) {
+                    userProfile = JSON.parse(localCache);
+                    updateProfileUI();
+                    renderProfileBooks();
+                } else {
+                    userProfile = {
+                        name: user.displayName || user.email.split('@')[0],
+                        bio: "",
+                        picture: user.photoURL || "",
+                        facebookUrl: ""
+                    };
+                    updateProfileUI();
+                }
+                
+                // 2. BACKGROUND SYNC WITH FIRESTORE
                 try {
-                    const profileDocRef = db.collection("users").doc(user.uid).collection("appData").doc("userProfile");
-                    const doc = await profileDocRef.get();
+                    const userDocRef = db.collection("users").doc(user.uid);
+                    const profileDocRef = userDocRef.collection("appData").doc("userProfile");
                     
+                    const doc = await profileDocRef.get();
                     if (doc.exists && doc.data().name) {
-                        // LOAD SAVED CUSTOM PROFILE INSTEAD OF OVERWRITING WITH GOOGLE DEFAULTS
                         userProfile = doc.data();
+                        localStorage.setItem('pocket_user_profile_' + user.uid, JSON.stringify(userProfile));
                     } else {
-                        userProfile = {
-                            name: user.displayName || user.email.split('@')[0],
-                            bio: "",
-                            picture: user.photoURL || "",
-                            facebookUrl: ""
-                        };
+                        await userDocRef.set({
+                            email: user.email,
+                            name: userProfile.name,
+                            photoURL: userProfile.picture,
+                            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                        }, { merge: true });
                         await profileDocRef.set(userProfile, { merge: true });
                     }
                 } catch (e) {
@@ -622,7 +639,6 @@
             } else {
                 if (authBtn) authBtn.innerHTML = `<i class="fa-solid fa-right-from-bracket"></i> Sign In`;
                 userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
-                localStorage.removeItem('pocket_user_profile');
                 updateProfileUI();
                 renderProfileBooks();
             }
@@ -668,7 +684,6 @@
 
         function signOutUser() {
             firebase.auth().signOut().then(() => {
-                localStorage.removeItem('pocket_user_profile');
                 userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
                 updateProfileUI();
                 renderProfileBooks();
@@ -1077,6 +1092,7 @@
             openNovelDetail(currentNovel.id);
         }
 
+        // PREVENT DOUBLE PUBLISHING WITH ISPUBLISHING GUARD
         async function handlePublishNovel(e) {
             e.preventDefault();
             if (!currentUser) {
@@ -1084,10 +1100,15 @@
                 document.getElementById('authModal').style.display = 'flex';
                 return;
             }
+            if (isPublishing) return; // Prevent double-click duplicates
             if (!uploadedCoverDataUrl) {
                 showToast("Please select a book cover image.", "fa-triangle-exclamation");
                 return;
             }
+
+            isPublishing = true;
+            const publishBtn = document.getElementById('publishBtn');
+            if (publishBtn) publishBtn.disabled = true;
 
             showToast("Publishing to cloud...", "fa-cloud-arrow-up");
             const novelId = Date.now().toString();
@@ -1116,8 +1137,13 @@
 
             try {
                 await db.collection("publicNovels").doc(novelId).set(newNovel);
-                novels.unshift(newNovel);
+                
+                // Ensure unique array update
+                if (!novels.some(n => n.id === novelId)) {
+                    novels.unshift(newNovel);
+                }
                 saveToStorage();
+                
                 showToast("Novel successfully published!", "fa-circle-check");
                 document.getElementById('publishForm').reset();
                 document.getElementById('coverPreview').style.display = 'none';
@@ -1126,6 +1152,9 @@
             } catch (err) {
                 console.error("Publish error:", err);
                 showToast("Failed to publish. Check Firestore Rules.", "fa-triangle-exclamation");
+            } finally {
+                isPublishing = false;
+                if (publishBtn) publishBtn.disabled = false;
             }
         }
 
