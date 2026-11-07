@@ -4,9 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pocket Novels - Read & Write Stories</title>
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
     <style>
@@ -21,114 +18,54 @@
             --text-muted: #94a3b8;
             --border-color: rgba(255, 255, 255, 0.1);
             --gradient-primary: linear-gradient(135deg, #6366f1 0%, #ec4899 100%);
-            --radius-md: 14px;
             --radius-lg: 20px;
-            --reader-bg: #121212;
-            --reader-text: #e0e0e0;
-            --reader-font-size: 18px;
         }
-
-        body.theme-light { --reader-bg: #f8fafc; --reader-text: #1e293b; }
-        body.theme-sepia { --reader-bg: #fbf0d9; --reader-text: #5f4b32; }
-        body.theme-dark { --reader-bg: #18181b; --reader-text: #d4d4d8; }
-
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
         body { background-color: var(--bg-body); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
-
-        header {
-            position: sticky; top: 0; z-index: 100; background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(16px); border-bottom: 1px solid var(--border-color);
-            padding: 0.8rem 1.5rem; display: flex; align-items: center; justify-content: space-between;
-            flex-wrap: wrap; gap: 1rem; width: 100%;
-        }
-
+        header { position: sticky; top: 0; z-index: 100; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border-color); padding: 0.8rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; width: 100%; }
         .logo { display: flex; align-items: center; gap: 10px; font-size: 1.3rem; font-weight: 800; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; cursor: pointer; }
         .logo i { font-size: 1.5rem; color: var(--primary-light); -webkit-text-fill-color: initial; }
-
         .search-container { position: relative; flex: 1; max-width: 300px; min-width: 200px; }
         .search-input { width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); padding: 8px 14px 8px 36px; border-radius: 20px; color: #fff; font-size: 0.85rem; outline: none; }
-        .search-input:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(99, 102, 241, 0.3); }
+        .search-input:focus { border-color: var(--primary); }
         .search-container i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.85rem; }
-
         .nav-links { display: flex; align-items: center; gap: 1rem; }
         .nav-item { color: var(--text-muted); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px; }
         .nav-item.active { color: var(--primary-light); background: rgba(255, 255, 255, 0.05); }
-
         .user-badge { width: 38px; height: 38px; border-radius: 50%; background: var(--gradient-primary); display: flex; align-items: center; justify-content: center; font-weight: 700; cursor: pointer; overflow: hidden; flex-shrink: 0; }
         .user-badge img { width: 100%; height: 100%; object-fit: cover; }
-
         main { flex: 1; padding: 1.5rem; max-width: 1200px; margin: 0 auto; width: 100%; }
         .view-section { display: none; }
         .view-section.active { display: block; }
-
         .genre-filters { display: flex; gap: 8px; overflow-x: auto; padding: 0.5rem 0 1.2rem 0; white-space: nowrap; scrollbar-width: none; }
         .genre-filters::-webkit-scrollbar { display: none; }
-        .genre-tab { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-muted); padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; cursor: pointer; flex-shrink: 0; transition: all 0.2s; }
-        .genre-tab.active { background: var(--gradient-primary); color: #fff; border-color: transparent; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
-
+        .genre-tab { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-muted); padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; cursor: pointer; flex-shrink: 0; }
+        .genre-tab.active { background: var(--gradient-primary); color: #fff; border-color: transparent; }
         .btn { background: var(--gradient-primary); color: #fff; border: none; padding: 10px 22px; border-radius: 20px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
         .btn-secondary { background: var(--bg-card-hover); color: var(--text-main); }
-        .btn-success { background: #10b981; color: #fff; }
-        .btn-danger { background: #ef4444; color: #fff; }
-
         .studio-card { background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border-color); padding: 2rem; max-width: 800px; margin: 0 auto; }
         .form-group { margin-bottom: 1.5rem; }
         .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem; }
         .form-control { width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; color: #fff; outline: none; }
-        .form-control:focus { border-color: var(--primary); }
-
-        .custom-select-wrapper { position: relative; width: 100%; cursor: pointer; }
-        .custom-select-selected { background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; color: #fff; display: flex; justify-content: space-between; align-items: center; }
-        .custom-select-options { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; margin-top: 4px; z-index: 50; display: none; max-height: 200px; overflow-y: auto; box-shadow: 0 8px 20px rgba(0,0,0,0.5); }
-        .custom-select-options.open { display: block; }
-        .custom-select-option { padding: 10px 12px; color: var(--text-main); transition: background 0.2s; }
-        .custom-select-option:hover { background: var(--primary); color: #fff; }
-
         .file-upload-wrapper { border: 2px dashed var(--primary); padding: 1.5rem; text-align: center; border-radius: 12px; background: rgba(99, 102, 241, 0.05); cursor: pointer; margin-top: 6px; }
         .file-upload-wrapper input[type="file"] { display: none; }
         .preview-img { max-height: 180px; border-radius: 8px; margin-top: 10px; display: none; }
-
         .profile-card { background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border-color); padding: 2rem; margin-bottom: 2rem; display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; }
         .profile-pic { width: 90px; height: 90px; border-radius: 50%; background: var(--gradient-primary); display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 800; overflow: hidden; flex-shrink: 0; }
         .profile-pic img { width: 100%; height: 100%; object-fit: cover; }
         .profile-details { flex: 1; min-width: 200px; }
         .profile-name { font-size: 1.5rem; font-weight: 800; margin-bottom: 4px; }
         .profile-bio { color: var(--text-muted); font-size: 0.9rem; line-height: 1.4; margin-bottom: 10px; }
-
-        .reader-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--reader-bg); color: var(--reader-text); z-index: 1000; display: none; flex-direction: column; }
-        .reader-container.active { display: flex; }
-        .reader-header, .reader-footer { padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
-        .reader-content { flex: 1; overflow-y: auto; padding: 3rem 1.5rem; max-width: 750px; margin: 0 auto; width: 100%; font-family: 'Lora', serif; font-size: var(--reader-font-size); line-height: 1.8; }
-        
-        .reader-controls { display: flex; gap: 10px; align-items: center; }
-        .theme-dot { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid #fff; }
-        
         .auth-btn { background-color: rgba(255, 255, 255, 0.08); color: #e6edf3; border: 1px solid rgba(255, 255, 255, 0.15); padding: 6px 14px; border-radius: 20px; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 6px; font-size: 0.85rem; }
-        
-        .auth-modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+        .auth-modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.75); display: flex; align-items: center; justify-content: center; z-index: 9999; }
         .auth-modal-content { background: #161b22; border: 1px solid rgba(255, 255, 255, 0.15); width: 90%; max-width: 380px; border-radius: 12px; padding: 24px; color: #e6edf3; }
-        .auth-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .google-signin-btn { width: 100%; background: #ffffff; color: #24292e; border: none; padding: 10px; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
-        .auth-divider { text-align: center; border-bottom: 1px solid #30363d; line-height: 0.1em; margin: 20px 0; color: #8b949e; font-size: 0.75rem; }
-        .auth-divider span { background: #161b22; padding: 0 10px; }
-        .auth-input { width: 100%; box-sizing: border-box; padding: 10px 12px; margin-bottom: 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #e6edf3; font-size: 0.9rem; outline: none; }
-        .auth-buttons-row { display: flex; gap: 10px; margin-top: 10px; }
-        .auth-action-btn { flex: 1; padding: 10px; border-radius: 6px; font-weight: 600; cursor: pointer; border: none; }
-        .auth-action-btn.primary { background: #238636; color: #fff; }
-        .auth-action-btn.secondary { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
-
-        #customModalOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.75); display: flex; align-items: center; justify-content: center; z-index: 20000; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
-        #customModalOverlay.show { opacity: 1; pointer-events: auto; }
-        .custom-modal-box { background: #1e293b; border: 1px solid var(--border-color); width: 90%; max-width: 360px; border-radius: var(--radius-lg); padding: 24px; color: var(--text-main); text-align: center; }
-
-        #appToast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1e293b; color: #f8fafc; border: 1px solid var(--primary-light); padding: 12px 24px; border-radius: 30px; font-weight: 600; font-size: 0.9rem; z-index: 10000; transition: transform 0.3s ease, opacity 0.3s ease; opacity: 0; display: flex; align-items: center; gap: 10px; pointer-events: none; }
+        #appToast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1e293b; color: #f8fafc; border: 1px solid var(--primary-light); padding: 12px 24px; border-radius: 30px; font-weight: 600; font-size: 0.9rem; z-index: 10000; transition: transform 0.3s ease; opacity: 0; display: flex; align-items: center; gap: 10px; pointer-events: none; }
         #appToast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-
         .novel-grid { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; padding: 12px 0 !important; }
         .novel-card { background: #1e293b; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); position: relative; width: 100% !important; }
         .novel-cover { width: 100% !important; height: 140px !important; object-fit: cover !important; background: #334155; cursor: pointer; }
-        .genre-badge { position: absolute; top: 10px; right: 10px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(6px); color: var(--primary-light); border: 1px solid rgba(255, 255, 255, 0.1); padding: 3px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; }
-        .lang-badge { position: absolute; top: 10px; left: 10px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(6px); color: var(--secondary); border: 1px solid rgba(255, 255, 255, 0.1); padding: 3px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; }
+        .genre-badge { position: absolute; top: 10px; right: 10px; background: rgba(15, 23, 42, 0.85); color: var(--primary-light); padding: 3px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; }
+        .lang-badge { position: absolute; top: 10px; left: 10px; background: rgba(15, 23, 42, 0.85); color: var(--secondary); padding: 3px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; }
         .novel-info { padding: 0.8rem; flex: 1; cursor: pointer; }
         .novel-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .novel-author { font-size: 0.75rem; color: var(--primary-light); cursor: pointer; text-decoration: underline; display: inline-block; margin-bottom: 4px; }
@@ -155,28 +92,15 @@
 
     <div id="appToast"><i class="fa-solid fa-circle-info" id="toastIcon"></i><span id="toastMessage">Notification</span></div>
 
-    <div id="customModalOverlay">
-        <div class="custom-modal-box">
-            <div id="customModalTitle" style="font-weight:700; margin-bottom:10px; color:var(--primary-light);">Confirm</div>
-            <div id="customModalText" style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;">Are you sure?</div>
-            <div style="display:flex; gap:10px; justify-content:center;">
-                <button class="btn btn-secondary" id="customModalCancel" style="padding:8px 18px; font-size:0.85rem;">Cancel</button>
-                <button class="btn" id="customModalConfirm" style="padding:8px 18px; font-size:0.85rem;">OK</button>
-            </div>
-        </div>
-    </div>
-
     <header>
         <div class="logo" onclick="switchView('exploreView', true)">
             <i class="fa-solid fa-book-bookmark"></i>
             <span>Pocket Novels</span>
         </div>
-
         <div class="search-container">
             <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" id="searchInput" class="search-input" placeholder="Search novel, author, language..." onkeyup="applyFilters()">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search novel, author..." onkeyup="applyFilters()">
         </div>
-
         <div class="nav-links">
             <div class="nav-item active" id="navExplore" onclick="switchView('exploreView', true)"><i class="fa-solid fa-compass"></i> <span>Explore</span></div>
             <div class="nav-item" id="navLibrary" onclick="switchView('libraryView', true)"><i class="fa-solid fa-bookmark"></i> <span>Library</span></div>
@@ -190,15 +114,13 @@
         <section id="exploreView" class="view-section active">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                 <h2 style="margin:0;">Explore Novels</h2>
-                <button class="btn btn-secondary" onclick="forceManualRefresh()" style="padding: 6px 14px; font-size: 0.8rem;"><i class="fa-solid fa-rotate"></i> Refresh Feed</button>
+                <button class="btn btn-secondary" onclick="loadNovels()" style="padding: 6px 14px; font-size: 0.8rem;"><i class="fa-solid fa-rotate"></i> Refresh Feed</button>
             </div>
             <div class="genre-filters">
                 <button class="genre-tab active" onclick="filterByGenre('All', this)">All</button>
                 <button class="genre-tab" onclick="filterByGenre('Fantasy', this)">Fantasy</button>
                 <button class="genre-tab" onclick="filterByGenre('Romance', this)">Romance</button>
                 <button class="genre-tab" onclick="filterByGenre('Action', this)">Action</button>
-                <button class="genre-tab" onclick="filterByGenre('Sci-Fi', this)">Sci-Fi</button>
-                <button class="genre-tab" onclick="filterByGenre('Mystery', this)">Mystery</button>
             </div>
             <div class="novel-grid" id="novelGrid"></div>
         </section>
@@ -216,78 +138,37 @@
         <section id="studioView" class="view-section">
             <div class="studio-card">
                 <h2><i class="fa-solid fa-pen-fancy"></i> Writer's Studio</h2>
-                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Create and publish a new novel globally for anyone to read.</p>
                 <form id="publishForm" onsubmit="handlePublishNovel(event)">
                     <div class="form-group">
                         <label>Novel Title</label>
-                        <input type="text" id="pubTitle" class="form-control" placeholder="Enter book title" required>
+                        <input type="text" id="pubTitle" class="form-control" placeholder="Book title" required>
                     </div>
-
                     <div class="form-group">
                         <label>Genre</label>
-                        <div class="custom-select-wrapper" onclick="toggleCustomDropdown('genreDropdown')">
-                            <div class="custom-select-selected" id="pubGenreSelected">Fantasy <i class="fa-solid fa-chevron-down"></i></div>
-                            <div class="custom-select-options" id="genreDropdown">
-                                <div class="custom-select-option" onclick="selectCustomOption('genre', 'Fantasy')">Fantasy</div>
-                                <div class="custom-select-option" onclick="selectCustomOption('genre', 'Romance')">Romance</div>
-                                <div class="custom-select-option" onclick="selectCustomOption('genre', 'Action')">Action</div>
-                                <div class="custom-select-option" onclick="selectCustomOption('genre', 'Sci-Fi')">Sci-Fi</div>
-                                <div class="custom-select-option" onclick="selectCustomOption('genre', 'Mystery')">Mystery</div>
-                            </div>
-                        </div>
+                        <select id="pubGenre" class="form-control" style="background:#0f172a; color:#fff;">
+                            <option value="Fantasy">Fantasy</option>
+                            <option value="Romance">Romance</option>
+                            <option value="Action">Action</option>
+                        </select>
                     </div>
-
                     <div class="form-group">
-                        <label>Language</label>
-                        <div class="custom-select-wrapper" onclick="toggleCustomDropdown('langDropdown')">
-                            <div class="custom-select-selected" id="pubLangSelected">English <i class="fa-solid fa-chevron-down"></i></div>
-                            <div class="custom-select-options" id="langDropdown">
-                                <div class="custom-select-option" onclick="selectCustomOption('lang', 'English')">English</div>
-                                <div class="custom-select-option" onclick="selectCustomOption('lang', 'Urdu')">Urdu</div>
-                                <div class="custom-select-option" onclick="selectCustomOption('lang', 'Hindi')">Hindi</div>
-                                <div class="custom-select-option" onclick="selectCustomOption('lang', 'Korean')">Korean</div>
-                                <div class="custom-select-option" onclick="selectCustomOption('lang', 'Chinese')">Chinese</div>
-                                <div class="custom-select-option" onclick="selectCustomOption('lang', 'Arabic')">Arabic</div>
-                                <div class="custom-select-option" onclick="selectCustomOption('lang', 'Spanish')">Spanish</div>
-                                <div class="custom-select-option" onclick="selectCustomOption('lang', 'Japanese')">Japanese</div>
-                                <div class="custom-select-option" onclick="selectCustomOption('lang', 'French')">French</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Text Alignment</label>
-                        <div class="custom-select-wrapper" onclick="toggleCustomDropdown('alignDropdown')">
-                            <div class="custom-select-selected" id="pubAlignSelected">Left-to-Right (English / Standard) <i class="fa-solid fa-chevron-down"></i></div>
-                            <div class="custom-select-options" id="alignDropdown">
-                                <div class="custom-select-option" onclick="selectCustomOption('align', 'ltr', 'Left-to-Right (English / Standard)')">Left-to-Right (English / Standard)</div>
-                                <div class="custom-select-option" onclick="selectCustomOption('align', 'rtl', 'Right-to-Left (Urdu / Arabic)')">Right-to-Left (Urdu / Arabic)</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Book Cover Image</label>
+                        <label>Cover Image</label>
                         <div class="file-upload-wrapper" onclick="document.getElementById('pubCoverFile').click()">
                             <i class="fa-solid fa-image" style="font-size: 2rem; color: var(--primary-light);"></i>
-                            <p style="margin-top: 8px;">Tap here to select image</p>
+                            <p style="margin-top: 8px;">Tap to select image</p>
                             <input type="file" id="pubCoverFile" accept="image/*" onchange="previewGalleryImage(event)" required>
-                            <img id="coverPreview" class="preview-img" alt="Cover Preview">
+                            <img id="coverPreview" class="preview-img" alt="Preview">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Synopsis / Summary</label>
-                        <textarea id="pubSynopsis" class="form-control" style="min-height: 100px;" placeholder="Write summary..." required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Chapter 1 Title</label>
-                        <input type="text" id="pubEpTitle" class="form-control" placeholder="Chapter 1" required>
+                        <label>Synopsis</label>
+                        <textarea id="pubSynopsis" class="form-control" placeholder="Summary..." required></textarea>
                     </div>
                     <div class="form-group">
                         <label>Chapter 1 Content</label>
-                        <textarea id="pubEpContent" class="form-control" style="min-height: 180px;" placeholder="Write text..." required></textarea>
+                        <textarea id="pubEpContent" class="form-control" placeholder="Story text..." required></textarea>
                     </div>
-                    <button type="submit" id="publishBtn" class="btn"><i class="fa-solid fa-cloud-arrow-up"></i> Publish Now</button>
+                    <button type="submit" class="btn"><i class="fa-solid fa-cloud-arrow-up"></i> Publish Now</button>
                 </form>
             </div>
         </section>
@@ -297,630 +178,206 @@
                 <div class="profile-pic" id="profilePicContainer"><span>ME</span></div>
                 <div class="profile-details">
                     <div class="profile-name" id="profileNameDisplay">Guest User</div>
-                    <div class="profile-bio" id="profileBioDisplay">Sign in to create your author profile.</div>
-                    <div class="profile-social" id="profileSocialDisplay" style="margin-top: 6px;"></div>
+                    <div class="profile-bio" id="profileBioDisplay">Sign in to publish stories.</div>
                     <button class="btn btn-secondary" onclick="toggleEditProfile()" style="margin-top: 10px;"><i class="fa-solid fa-user-pen"></i> Edit Profile</button>
                 </div>
             </div>
-
             <div class="studio-card" id="editProfileCard" style="display: none; margin-bottom: 2rem;">
-                <h3>Edit Author Profile</h3>
-                <form id="editProfileForm" onsubmit="handleSaveProfile(event)" style="margin-top: 1rem;">
+                <h3>Edit Profile</h3>
+                <form onsubmit="handleSaveProfile(event)" style="margin-top: 1rem;">
                     <div class="form-group">
                         <label>Pen Name</label>
                         <input type="text" id="editNameInput" class="form-control" required>
                     </div>
                     <div class="form-group">
-                        <label>Author Bio</label>
-                        <textarea id="editBioInput" class="form-control" style="min-height: 80px;"></textarea>
+                        <label>Bio</label>
+                        <textarea id="editBioInput" class="form-control"></textarea>
                     </div>
-                    <div class="form-group">
-                        <label>Facebook Link</label>
-                        <input type="url" id="editSocialInput" class="form-control" placeholder="https://facebook.com/...">
-                    </div>
-                    <div style="display: flex; gap: 10px;">
-                        <button type="submit" class="btn"><i class="fa-solid fa-check"></i> Save Profile</button>
-                        <button type="button" class="btn btn-secondary" onclick="toggleEditProfile()">Cancel</button>
-                    </div>
+                    <button type="submit" class="btn">Save Profile</button>
                 </form>
             </div>
-
             <h3>My Published Stories</h3>
             <div class="novel-grid" id="myPublishedGrid"></div>
         </section>
-
-        <section id="authorPublicView" class="view-section">
-            <button class="btn btn-secondary" onclick="switchView('exploreView', true)" style="margin-bottom: 1.5rem;"><i class="fa-solid fa-arrow-left"></i> Back</button>
-            <div class="profile-card">
-                <div class="profile-pic" id="publicAuthorPic"><span id="publicAuthorInitials">AU</span></div>
-                <div class="profile-details">
-                    <div class="profile-name" id="publicAuthorName">Author Name</div>
-                    <div class="profile-bio" id="publicAuthorBio">Bio goes here.</div>
-                    <div class="profile-social" id="publicAuthorSocialDisplay" style="margin-top: 6px;"></div>
-                </div>
-            </div>
-            <h3>Books by this Author</h3>
-            <div class="novel-grid" id="publicAuthorBooksGrid"></div>
-        </section>
     </main>
-
-    <div class="reader-container" id="addChapterModal" style="background: rgba(15, 23, 42, 0.95); justify-content: center; align-items: center;">
-        <div class="studio-card" style="width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;">
-            <h3><i class="fa-solid fa-folder-plus"></i> Add New Chapter</h3>
-            <form onsubmit="handleSaveNewChapter(event)" style="margin-top: 1rem;">
-                <div class="form-group">
-                    <label>Chapter Title</label>
-                    <input type="text" id="newChapTitle" class="form-control" placeholder="Chapter Title" required>
-                </div>
-                <div class="form-group">
-                    <label>Content</label>
-                    <textarea id="newChapContent" class="form-control" style="min-height: 200px;" placeholder="Content..." required></textarea>
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <button type="submit" class="btn"><i class="fa-solid fa-plus"></i> Add Chapter</button>
-                    <button type="button" class="btn btn-secondary" onclick="closeAddChapterModal()">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div class="reader-container" id="readerModal">
-        <div class="reader-header">
-            <button class="btn btn-secondary" onclick="closeReader()"><i class="fa-solid fa-xmark"></i></button>
-            <div id="readerHeaderTitle" style="font-weight: 700;">Chapter 1</div>
-            <div class="reader-controls">
-                <div class="theme-dot" style="background: #18181b;" onclick="setReaderTheme('dark')" title="Dark"></div>
-                <div class="theme-dot" style="background: #fbf0d9;" onclick="setReaderTheme('sepia')" title="Sepia"></div>
-                <div class="theme-dot" style="background: #f8fafc;" onclick="setReaderTheme('light')" title="Light"></div>
-                <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="changeFontSize(2)">A+</button>
-                <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="changeFontSize(-2)">A-</button>
-            </div>
-        </div>
-        <div class="reader-content" id="readerText"></div>
-        <div class="reader-footer">
-            <button class="btn btn-secondary" onclick="prevChapter()"><i class="fa-solid fa-chevron-left"></i> Prev</button>
-            <span id="chapterIndicator" style="color: var(--text-muted);">Chapter 1</span>
-            <button class="btn" onclick="nextChapter()">Next <i class="fa-solid fa-chevron-right"></i></button>
-        </div>
-    </div>
 
     <div id="authModal" class="auth-modal-overlay" style="display: none;">
       <div class="auth-modal-content">
-        <div class="auth-modal-header">
-          <h3 style="margin:0;">Sign In</h3>
-          <span style="font-size:1.5rem; cursor:pointer;" onclick="closeAuthModal()">&times;</span>
-        </div>
-        <button class="google-signin-btn" onclick="signInWithGoogle(); closeAuthModal();">
+        <h3 style="margin-bottom:20px;">Sign In <span style="float:right; cursor:pointer;" onclick="closeAuthModal()">&times;</span></h3>
+        <button class="btn" style="width:100%; background:#fff; color:#000; justify-content:center;" onclick="signInWithGoogle(); closeAuthModal();">
           <i class="fa-brands fa-google"></i> Continue with Google
         </button>
-        <div class="auth-divider"><span>OR EMAIL</span></div>
-        <input type="email" id="authEmailInput" placeholder="Email" class="auth-input">
-        <input type="password" id="authPasswordInput" placeholder="Password" class="auth-input">
-        <div class="auth-buttons-row">
-          <button class="auth-action-btn primary" onclick="handleEmailLoginSubmit()">Sign In</button>
-          <button class="auth-action-btn secondary" onclick="handleEmailSignupSubmit()">Register</button>
-        </div>
       </div>
     </div>
 
     <script>
-        function showToast(message, iconClass = "fa-circle-info") {
-            const toast = document.getElementById('appToast');
-            if(!toast) return;
-            document.getElementById('toastMessage').innerText = message;
-            document.getElementById('toastIcon').className = "fa-solid " + iconClass;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 3500);
+        function showToast(msg) {
+            const t = document.getElementById('appToast');
+            t.innerText = msg; t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
         }
-
-        function showConfirmModal(title, text, onConfirm) {
-            const overlay = document.getElementById('customModalOverlay');
-            document.getElementById('customModalTitle').innerText = title;
-            document.getElementById('customModalText').innerText = text;
-            overlay.classList.add('show');
-            const confirmBtn = document.getElementById('customModalConfirm');
-            const cancelBtn = document.getElementById('customModalCancel');
-            const cleanup = () => { overlay.classList.remove('show'); confirmBtn.onclick = null; cancelBtn.onclick = null; };
-            confirmBtn.onclick = () => { cleanup(); onConfirm(); };
-            cancelBtn.onclick = () => { cleanup(); };
-        }
-
-        let selectedGenre = 'Fantasy';
-        let selectedLang = 'English';
-        let selectedAlign = 'ltr';
-
-        function toggleCustomDropdown(id) {
-            document.querySelectorAll('.custom-select-options').forEach(el => { if(el.id !== id) el.classList.remove('open'); });
-            document.getElementById(id).classList.toggle('open');
-        }
-
-        function selectCustomOption(type, value, labelText = null) {
-            if (type === 'genre') {
-                selectedGenre = value;
-                document.getElementById('pubGenreSelected').innerHTML = `${value} <i class="fa-solid fa-chevron-down"></i>`;
-                document.getElementById('genreDropdown').classList.remove('open');
-            } else if (type === 'lang') {
-                selectedLang = value;
-                document.getElementById('pubLangSelected').innerHTML = `${value} <i class="fa-solid fa-chevron-down"></i>`;
-                document.getElementById('langDropdown').classList.remove('open');
-            } else if (type === 'align') {
-                selectedAlign = value;
-                document.getElementById('pubAlignSelected').innerHTML = `${labelText} <i class="fa-solid fa-chevron-down"></i>`;
-                document.getElementById('alignDropdown').classList.remove('open');
-            }
-        }
-
-        window.onclick = function(e) {
-            if (!e.target.closest('.custom-select-wrapper')) {
-                document.querySelectorAll('.custom-select-options').forEach(el => el.classList.remove('open'));
-            }
-        };
 
         let novels = [];
         let savedBookmarks = JSON.parse(localStorage.getItem('pocket_bookmarks')) || [];
-        let authorBios = {};
-        let userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
-
-        let currentGenreFilter = 'All';
-        let uploadedCoverDataUrl = "";
-        let currentNovel = null;
-        let currentChapterIdx = 0;
-        let currentFontSize = 18;
+        let userProfile = { name: "", bio: "", picture: "" };
         let currentUser = null;
-        let isPublishing = false;
+        let uploadedCoverDataUrl = "";
 
-        // BULLETPROOF DIRECT FETCH SYNC (Direct .get() instead of failing listeners)
-        async function fetchNovelsFromCloud() {
+        async function loadNovels() {
             try {
-                const snapshot = await db.collection("publicNovels").get();
-                const cloudNovels = [];
-                snapshot.forEach(doc => {
-                    cloudNovels.push({ id: doc.id, ...doc.data() });
-                });
-                novels = cloudNovels;
-                novels.sort((a, b) => Number(b.id) - Number(a.id));
+                const snap = await db.collection("publicNovels").get();
+                novels = [];
+                snap.forEach(doc => novels.push({ id: doc.id, ...doc.data() }));
                 applyFilters();
                 renderLibrary();
                 renderProfileBooks();
-            } catch (err) {
-                console.error("Fetch error:", err);
+            } catch (e) {
+                console.error(e);
             }
         }
+        loadNovels();
 
-        function forceManualRefresh() {
-            showToast("Refreshing feed...", "fa-rotate");
-            fetchNovelsFromCloud().then(() => {
-                showToast("Feed updated!", "fa-circle-check");
-            });
-        }
-
-        fetchNovelsFromCloud();
-
-        // PERSISTENT AUTH & PROFILE LOADER
         firebase.auth().onAuthStateChanged(async (user) => {
             currentUser = user;
-            const authBtn = document.getElementById('authBtn');
-            
+            const btn = document.getElementById('authBtn');
             if (user) {
-                if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
-                
-                // Set default from Google auth credentials immediately so UI updates instantly
-                userProfile = { 
-                    name: user.displayName || user.email.split('@')[0], 
-                    bio: "", 
-                    picture: user.photoURL || "", 
-                    facebookUrl: "" 
-                };
-
-                // Load custom profile saved in Firestore if available
+                btn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
+                userProfile = { name: user.displayName || "Author", bio: "", picture: user.photoURL || "" };
                 try {
-                    const docRef = db.collection("users").doc(user.uid).collection("appData").doc("userProfile");
-                    const docSnap = await docRef.get();
-                    if (docSnap.exists && docSnap.data().name) {
-                        userProfile = docSnap.data();
-                    } else {
-                        await docRef.set(userProfile, { merge: true });
-                    }
+                    const doc = await db.collection("users").doc(user.uid).collection("appData").doc("profile").get();
+                    if (doc.exists) userProfile = doc.data();
                 } catch(e) {}
-                
                 updateProfileUI();
-                renderProfileBooks();
             } else {
-                if (authBtn) authBtn.innerHTML = '<i class="fa-brands fa-google"></i> Sign In';
-                userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
+                btn.innerHTML = '<i class="fa-brands fa-google"></i> Sign In';
+                userProfile = { name: "", bio: "", picture: "" };
                 updateProfileUI();
-                renderProfileBooks();
             }
         });
 
         function handleAuthClick() {
-            if (currentUser) {
-                showConfirmModal("Sign Out", "Are you sure you want to sign out?", () => {
-                    firebase.auth().signOut().then(() => window.location.reload());
-                });
-            } else {
-                document.getElementById('authModal').style.display = 'flex';
-            }
+            if (currentUser) firebase.auth().signOut().then(() => window.location.reload());
+            else document.getElementById('authModal').style.display = 'flex';
         }
         function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
-
-        function handleEmailLoginSubmit() {
-            const e = document.getElementById('authEmailInput').value.trim();
-            const p = document.getElementById('authPasswordInput').value;
-            firebase.auth().signInWithEmailAndPassword(e, p).then(() => closeAuthModal()).catch(err => showToast(err.message, "fa-triangle-exclamation"));
-        }
-        function handleEmailSignupSubmit() {
-            const e = document.getElementById('authEmailInput').value.trim();
-            const p = document.getElementById('authPasswordInput').value;
-            firebase.auth().createUserWithEmailAndPassword(e, p).then(() => closeAuthModal()).catch(err => showToast(err.message, "fa-triangle-exclamation"));
-        }
-        function signInWithGoogle() {
-            firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(err => showToast(err.message, "fa-triangle-exclamation"));
-        }
+        function signInWithGoogle() { firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
 
         function updateProfileUI() {
-            const nameEl = document.getElementById('profileNameDisplay');
-            const bioEl = document.getElementById('profileBioDisplay');
-            const socialEl = document.getElementById('profileSocialDisplay');
-            if (!userProfile.name) {
-                if (nameEl) nameEl.innerText = "Guest User";
-                if (bioEl) bioEl.innerText = "Sign in to publish stories.";
-                if (socialEl) socialEl.innerHTML = '';
-            } else {
-                if (nameEl) nameEl.innerText = userProfile.name;
-                if (bioEl) bioEl.innerText = userProfile.bio || "No bio added yet.";
-                if (socialEl && userProfile.facebookUrl) {
-                    socialEl.innerHTML = `<a href="${userProfile.facebookUrl}" target="_blank" style="color: #38bdf8; text-decoration: none;"><i class="fa-brands fa-facebook"></i> Facebook</a>`;
-                } else if (socialEl) { socialEl.innerHTML = ''; }
-            }
-            const picContainer = document.getElementById('profilePicContainer');
-            const headerAvatar = document.getElementById('headerAvatar');
-            const initials = (userProfile.name || "G").substring(0, 2).toUpperCase();
-            if (userProfile.picture) {
-                if (picContainer) picContainer.innerHTML = `<img src="${userProfile.picture}">`;
-                if (headerAvatar) headerAvatar.innerHTML = `<img src="${userProfile.picture}">`;
-            } else {
-                if (picContainer) picContainer.innerHTML = `<span>${initials}</span>`;
-                if (headerAvatar) headerAvatar.innerHTML = `<span>${initials}</span>`;
-            }
+            document.getElementById('profileNameDisplay').innerText = userProfile.name || "Guest User";
+            document.getElementById('profileBioDisplay').innerText = userProfile.bio || "No bio added.";
+            const av = document.getElementById('headerAvatar');
+            if (userProfile.picture) av.innerHTML = `<img src="${userProfile.picture}">`;
+            else av.innerHTML = `<span>${(userProfile.name || "G").substring(0,2).toUpperCase()}</span>`;
         }
 
         function toggleEditProfile() {
             if (!currentUser) { document.getElementById('authModal').style.display = 'flex'; return; }
-            const card = document.getElementById('editProfileCard');
-            const isOpening = card.style.display === 'none' || card.style.display === '';
-            if (isOpening) {
-                document.getElementById('editNameInput').value = userProfile.name || "";
-                document.getElementById('editBioInput').value = userProfile.bio || "";
-                document.getElementById('editSocialInput').value = userProfile.facebookUrl || "";
-            }
-            card.style.display = isOpening ? 'block' : 'none';
+            const c = document.getElementById('editProfileCard');
+            c.style.display = c.style.display === 'none' ? 'block' : 'none';
+            document.getElementById('editNameInput').value = userProfile.name;
+            document.getElementById('editBioInput').value = userProfile.bio;
         }
 
         async function handleSaveProfile(e) {
             e.preventDefault();
-            if (!currentUser) return;
-            userProfile.name = document.getElementById('editNameInput').value.trim();
+            userProfile.name = document.getElementById('editNameInput').value;
             userProfile.bio = document.getElementById('editBioInput').value;
-            userProfile.facebookUrl = document.getElementById('editSocialInput').value.trim();
-
-            try {
-                await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
-                await db.collection("authorsDirectory").doc(userProfile.name).set({ bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl }, { merge: true });
-                updateProfileUI();
-                toggleEditProfile();
-                showToast("Profile saved!", "fa-circle-check");
-            } catch(err) { showToast("Failed to save profile.", "fa-triangle-exclamation"); }
+            await db.collection("users").doc(currentUser.uid).collection("appData").doc("profile").set(userProfile);
+            updateProfileUI();
+            toggleEditProfile();
+            showToast("Profile saved!");
         }
 
-        function previewGalleryImage(event) {
-            const file = event.target.files[0];
+        function previewGalleryImage(e) {
+            const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = function(e) {
+                reader.onload = function(evt) {
                     const img = new Image();
-                    img.src = e.target.result;
+                    img.src = evt.target.result;
                     img.onload = function() {
                         const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
                         canvas.width = 300; canvas.height = 400;
-                        ctx.drawImage(img, 0, 0, 300, 400);
+                        canvas.getContext('2d').drawImage(img, 0, 0, 300, 400);
                         uploadedCoverDataUrl = canvas.toDataURL('image/jpeg', 0.6);
-                        const preview = document.getElementById('coverPreview');
-                        preview.src = uploadedCoverDataUrl;
-                        preview.style.display = 'block';
+                        const p = document.getElementById('coverPreview');
+                        p.src = uploadedCoverDataUrl; p.style.display = 'block';
                     }
                 };
                 reader.readAsDataURL(file);
             }
         }
 
-        function switchView(viewId, saveState = false) {
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            document.getElementById(viewId).classList.add('active');
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            if(viewId === 'exploreView') document.getElementById('navExplore').classList.add('active');
-            if(viewId === 'libraryView') document.getElementById('navLibrary').classList.add('active');
-            if(viewId === 'studioView') document.getElementById('navStudio').classList.add('active');
-            if(viewId === 'exploreView') { fetchNovelsFromCloud(); applyFilters(); }
-            if(viewId === 'libraryView') renderLibrary();
-            if(viewId === 'profileView') renderProfileBooks();
-            if(saveState) localStorage.setItem('pocket_last_view', viewId);
+        async function handlePublishNovel(e) {
+            e.preventDefault();
+            if (!currentUser) { document.getElementById('authModal').style.display = 'flex'; return; }
+            if (!uploadedCoverDataUrl) { showToast("Select a cover image!"); return; }
+
+            const id = Date.now().toString();
+            const novel = {
+                id,
+                title: document.getElementById('pubTitle').value,
+                genre: document.getElementById('pubGenre').value,
+                author: userProfile.name,
+                cover: uploadedCoverDataUrl,
+                synopsis: document.getElementById('pubSynopsis').value,
+                views: 0,
+                chapters: [{ title: "Chapter 1", content: document.getElementById('pubEpContent').value }]
+            };
+
+            await db.collection("publicNovels").doc(id).set(novel);
+            showToast("Published!");
+            document.getElementById('publishForm').reset();
+            document.getElementById('coverPreview').style.display = 'none';
+            uploadedCoverDataUrl = "";
+            loadNovels();
+            switchView('exploreView', true);
         }
 
-        function filterByGenre(genre, el) {
-            currentGenreFilter = genre;
-            document.querySelectorAll('.genre-tab').forEach(btn => btn.classList.remove('active'));
+        function switchView(id, save = false) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if (save) localStorage.setItem('last_view', id);
+        }
+
+        function filterByGenre(g, el) {
+            document.querySelectorAll('.genre-tab').forEach(t => t.classList.remove('active'));
             if(el) el.classList.add('active');
-            applyFilters();
+            renderGrid(g === 'All' ? novels : novels.filter(n => n.genre === g), 'novelGrid');
         }
 
         function applyFilters() {
-            const query = document.getElementById('searchInput').value.toLowerCase().trim();
-            let filtered = novels;
-            if (currentGenreFilter !== 'All') {
-                filtered = filtered.filter(n => n.genre && n.genre.toLowerCase() === currentGenreFilter.toLowerCase());
-            }
-            if (query) {
-                filtered = filtered.filter(n => n.title.toLowerCase().includes(query) || n.author.toLowerCase().includes(query) || n.genre.toLowerCase().includes(query));
-            }
-            renderGrid(filtered, 'novelGrid');
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            renderGrid(novels.filter(n => n.title.toLowerCase().includes(q) || n.author.toLowerCase().includes(q)), 'novelGrid');
         }
 
-        function renderGrid(dataset, targetId) {
-            const grid = document.getElementById(targetId);
-            if(!grid) return;
-            if(dataset.length === 0) {
-                grid.innerHTML = `<p style="color: var(--text-muted); grid-column: 1/-1;">No novels found in database.</p>`;
+        function renderGrid(data, target) {
+            const grid = document.getElementById(target);
+            if (!grid) return;
+            if (data.length === 0) {
+                grid.innerHTML = `<p style="color:var(--text-muted); grid-column:1/-1;">No novels found in database. Publish your first book!</p>`;
                 return;
             }
-            grid.innerHTML = dataset.map(n => `
+            grid.innerHTML = data.map(n => `
                 <div class="novel-card">
-                    <span class="lang-badge">${n.language || 'English'}</span>
-                    <span class="genre-badge">${n.genre || 'General'}</span>
-                    <img class="novel-cover" src="${n.cover}" onclick="openNovelDetail('${n.id}')">
-                    <div class="novel-info" onclick="openNovelDetail('${n.id}')">
+                    <span class="genre-badge">${n.genre}</span>
+                    <img class="novel-cover" src="${n.cover}">
+                    <div class="novel-info">
                         <div class="novel-title">${n.title}</div>
-                    </div>
-                    <div style="padding: 0 0.95rem 0.95rem 0.95rem;">
-                        <span class="novel-author" onclick="openAuthorProfile('${n.id}')">By ${n.author}</span>
-                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top:4px;">
-                            <div class="novel-stats"><i class="fa-solid fa-eye"></i> ${n.views || 0} views</div>
-                            <div class="novel-stats"><i class="fa-solid fa-book"></i> ${n.chapters ? n.chapters.length : 0} Ch</div>
-                        </div>
+                        <span class="novel-author">By ${n.author}</span>
+                        <div class="novel-stats"><i class="fa-solid fa-eye"></i> ${n.views || 0} views</div>
                     </div>
                 </div>
             `).join('');
         }
 
-        async function openAuthorProfile(novelId) {
-            const novel = novels.find(n => n.id == novelId);
-            if (!novel) return;
-            const authorName = novel.author || "Unknown";
-            document.getElementById('publicAuthorName').innerText = authorName;
-            document.getElementById('publicAuthorBio').innerText = novel.authorBio || "Author on Pocket Novels.";
-            
-            const picContainer = document.getElementById('publicAuthorPic');
-            if (novel.authorPic) picContainer.innerHTML = `<img src="${novel.authorPic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
-            else picContainer.innerHTML = `<span>${authorName.substring(0, 2).toUpperCase()}</span>`;
-
-            document.getElementById('publicAuthorSocialDisplay').innerHTML = novel.authorFb ? `<a href="${novel.authorFb}" target="_blank" style="color: #38bdf8; text-decoration: none;"><i class="fa-brands fa-facebook"></i> Facebook</a>` : '';
-            renderGrid(novels.filter(n => (n.author || "").trim().toLowerCase() === authorName.trim().toLowerCase()), 'publicAuthorBooksGrid');
-            switchView('authorPublicView');
-        }
-
-        async function openNovelDetail(id) {
-            currentNovel = novels.find(n => n.id == id);
-            if (!currentNovel) return;
-            
-            currentNovel.views = (currentNovel.views || 0) + 1;
-            try { await db.collection("publicNovels").doc(String(id)).update({ views: currentNovel.views }); } catch(e) {}
-
-            const isBookmarked = savedBookmarks.includes(id);
-            const isAuthor = currentUser && userProfile.name && (currentNovel.author || "").trim().toLowerCase() === userProfile.name.trim().toLowerCase();
-
-            const commentsHtml = (currentNovel.comments || []).map(c => `
-                <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 15px; margin-bottom: 10px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <strong style="font-size: 0.9rem; color: var(--primary-light);">${c.author || 'Reader'}</strong>
-                        <span style="font-size: 0.75rem; color: var(--text-muted);">${c.date || ''}</span>
-                    </div>
-                    <p style="font-size: 0.9rem; color: var(--text-main); margin: 0; line-height: 1.4;">${c.text}</p>
-                </div>
-            `).join('') || '<p style="color: var(--text-muted); font-size: 0.85rem;">No comments yet.</p>';
-
-            document.getElementById('detailContainer').innerHTML = `
-                <h2>${currentNovel.title}</h2>
-                <p style="margin-bottom: 0.5rem;">By <span style="color: var(--primary-light); cursor: pointer; text-decoration: underline;" onclick="openAuthorProfile('${currentNovel.id}')">${currentNovel.author}</span> • <span style="background: rgba(99,102,241,0.2); padding: 2px 8px; border-radius: 4px;">${currentNovel.genre}</span></p>
-                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;"><i class="fa-solid fa-eye"></i> ${currentNovel.views} Views</p>
-                <img src="${currentNovel.cover}" style="max-height: 250px; border-radius: 12px; margin-bottom: 1rem;">
-                <p style="line-height: 1.6; margin-bottom: 1.5rem;">${currentNovel.synopsis}</p>
-                
-                <div style="display: flex; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap;">
-                    <button class="btn" onclick="startReading(0)"><i class="fa-solid fa-book-open"></i> Read</button>
-                    <button class="btn btn-secondary" onclick="toggleBookmark('${currentNovel.id}')"><i class="fa-solid fa-bookmark"></i> ${isBookmarked ? 'Bookmarked' : 'Bookmark'}</button>
-                    <button class="btn btn-secondary" onclick="shareNovel('${currentNovel.title}', '${currentNovel.author}')"><i class="fa-solid fa-share-nodes"></i> Share</button>
-                    ${isAuthor ? `<button class="btn btn-success" onclick="openAddChapterModal()"><i class="fa-solid fa-plus"></i> Add Chapter</button><button class="btn btn-danger" onclick="confirmDeleteNovel('${currentNovel.id}')"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
-                </div>
-
-                <h3>Chapters (${currentNovel.chapters.length})</h3>
-                <div style="margin-top: 10px; margin-bottom: 2rem;">
-                    ${currentNovel.chapters.map((ch, idx) => `<div style="background: var(--bg-card); padding: 12px; border-radius: 8px; margin-bottom: 8px; cursor: pointer;" onclick="startReading(${idx})">${ch.title}</div>`).join('')}
-                </div>
-
-                <div class="comments-section" style="margin-top: 2rem;">
-                    <h3><i class="fa-solid fa-comments"></i> Reader Comments (${(currentNovel.comments || []).length})</h3>
-                    <form onsubmit="handleAddComment(event)" style="margin: 1rem 0;">
-                        <div class="form-group" style="margin-bottom: 0.8rem;">
-                            <input type="text" id="commentTextInput" class="form-control" placeholder="Write a comment..." required>
-                        </div>
-                        <button type="submit" class="btn btn-secondary" style="padding: 6px 16px; font-size: 0.85rem;"><i class="fa-solid fa-paper-plane"></i> Post Comment</button>
-                    </form>
-                    <div id="commentsContainer">${commentsHtml}</div>
-                </div>
-            `;
-            switchView('detailView');
-        }
-
-        function confirmDeleteNovel(id) {
-            showConfirmModal("Delete Novel", "Are you sure you want to delete this novel?", async () => {
-                try {
-                    await db.collection("publicNovels").doc(String(id)).delete();
-                    showToast("Novel deleted.", "fa-circle-check");
-                    fetchNovelsFromCloud();
-                    switchView('exploreView', true);
-                } catch(e) { showToast("Failed to delete.", "fa-triangle-exclamation"); }
-            });
-        }
-
-        function shareNovel(title, author) {
-            const shareData = { title: title, text: `Check out "${title}" by ${author} on Pocket Novels!`, url: window.location.href };
-            if (navigator.share) { navigator.share(shareData).catch(() => {}); }
-            else { navigator.clipboard.writeText(window.location.href); showToast("Link copied to clipboard!", "fa-circle-check"); }
-        }
-
-        async function handleAddComment(e) {
-            e.preventDefault();
-            const textInput = document.getElementById('commentTextInput');
-            if(!textInput.value.trim()) return;
-
-            const commenterName = userProfile.name ? userProfile.name : "Guest Reader";
-            if(!currentNovel.comments) currentNovel.comments = [];
-            currentNovel.comments.unshift({
-                author: commenterName,
-                text: textInput.value.trim(),
-                date: new Date().toLocaleDateString()
-            });
-
-            try {
-                await db.collection("publicNovels").doc(String(currentNovel.id)).update({ comments: currentNovel.comments });
-                showToast("Comment posted!", "fa-circle-check");
-                openNovelDetail(currentNovel.id);
-            } catch (err) { showToast("Failed to post comment.", "fa-triangle-exclamation"); }
-        }
-
-        async function handlePublishNovel(e) {
-            e.preventDefault();
-            if (!currentUser) { document.getElementById('authModal').style.display = 'flex'; return; }
-            if (isPublishing) return;
-            if (!uploadedCoverDataUrl) { showToast("Please select a cover image.", "fa-triangle-exclamation"); return; }
-
-            isPublishing = true;
-            const publishBtn = document.getElementById('publishBtn');
-            if (publishBtn) publishBtn.disabled = true;
-
-            showToast("Publishing globally...", "fa-cloud-arrow-up");
-            const novelId = Date.now().toString();
-            const newNovel = {
-                id: novelId,
-                title: document.getElementById('pubTitle').value,
-                author: userProfile.name || currentUser.displayName || "Author",
-                authorBio: userProfile.bio || "",
-                authorPic: userProfile.picture || "",
-                authorFb: userProfile.facebookUrl || "",
-                genre: selectedGenre,
-                language: selectedLang,
-                alignment: selectedAlign,
-                cover: uploadedCoverDataUrl,
-                synopsis: document.getElementById('pubSynopsis').value,
-                views: 0,
-                comments: [],
-                chapters: [{ number: 1, title: document.getElementById('pubEpTitle').value, content: document.getElementById('pubEpContent').value }]
-            };
-
-            try {
-                await db.collection("publicNovels").doc(novelId).set(newNovel);
-                showToast("Published successfully!", "fa-circle-check");
-                document.getElementById('publishForm').reset();
-                document.getElementById('coverPreview').style.display = 'none';
-                uploadedCoverDataUrl = "";
-                fetchNovelsFromCloud();
-                switchView('exploreView', true);
-            } catch (err) {
-                showToast("Publish failed.", "fa-triangle-exclamation");
-            } finally {
-                isPublishing = false;
-                if (publishBtn) publishBtn.disabled = false;
-            }
-        }
-
-        function openAddChapterModal() { document.getElementById('addChapterModal').classList.add('active'); }
-        function closeAddChapterModal() { document.getElementById('addChapterModal').classList.remove('active'); }
-
-        async function handleSaveNewChapter(e) {
-            e.preventDefault();
-            currentNovel.chapters.push({
-                number: currentNovel.chapters.length + 1,
-                title: document.getElementById('newChapTitle').value,
-                content: document.getElementById('newChapContent').value
-            });
-            try {
-                await db.collection("publicNovels").doc(String(currentNovel.id)).update({ chapters: currentNovel.chapters });
-                closeAddChapterModal();
-                showToast("Chapter added!", "fa-circle-check");
-                fetchNovelsFromCloud();
-                openNovelDetail(currentNovel.id);
-            } catch(e) { showToast("Failed to add chapter.", "fa-triangle-exclamation"); }
-        }
-
-        function startReading(idx) {
-            currentChapterIdx = idx;
-            document.getElementById('readerModal').classList.add('active');
-            updateReader();
-        }
-
-        function updateReader() {
-            const ch = currentNovel.chapters[currentChapterIdx];
-            const alignment = currentNovel.alignment || 'ltr';
-            document.getElementById('readerHeaderTitle').innerText = ch.title;
-            document.getElementById('chapterIndicator').innerText = `Chapter ${currentChapterIdx + 1} of ${currentNovel.chapters.length}`;
-            const readerTextEl = document.getElementById('readerText');
-            readerTextEl.style.direction = alignment;
-            readerTextEl.style.textAlign = alignment === 'rtl' ? 'right' : 'left';
-            readerTextEl.innerHTML = `<h2>${ch.title}</h2><div style="white-space: pre-wrap; line-height: 1.8;">${ch.content}</div>`;
-        }
-
-        function setReaderTheme(theme) {
-            document.body.className = '';
-            if(theme !== 'dark') document.body.classList.add(`theme-${theme}`);
-        }
-
-        function changeFontSize(delta) {
-            currentFontSize = Math.max(14, Math.min(28, currentFontSize + delta));
-            document.documentElement.style.setProperty('--reader-font-size', currentFontSize + 'px');
-        }
-
-        function closeReader() { document.getElementById('readerModal').classList.remove('active'); }
-        function nextChapter() { if(currentChapterIdx < currentNovel.chapters.length - 1) { currentChapterIdx++; updateReader(); } }
-        function prevChapter() { if(currentChapterIdx > 0) { currentChapterIdx--; updateReader(); } }
-
-        function toggleBookmark(id) {
-            if(savedBookmarks.includes(id)) {
-                savedBookmarks = savedBookmarks.filter(b => b != id);
-                showToast("Removed from library.", "fa-bookmark");
-            } else {
-                savedBookmarks.push(id);
-                showToast("Saved to library!", "fa-bookmark");
-            }
-            localStorage.setItem('pocket_bookmarks', JSON.stringify(savedBookmarks));
-            openNovelDetail(id);
-        }
-
-        function renderLibrary() {
-            renderGrid(novels.filter(n => savedBookmarks.includes(n.id)), 'libraryGrid');
-        }
-
+        function renderLibrary() { renderGrid(novels.filter(n => savedBookmarks.includes(n.id)), 'libraryGrid'); }
         function renderProfileBooks() {
-            updateProfileUI();
-            if (!userProfile.name) {
-                document.getElementById('myPublishedGrid').innerHTML = `<p style="color: var(--text-muted); grid-column: 1/-1;">Sign in to view your books.</p>`;
-                return;
-            }
-            const pen = userProfile.name.trim().toLowerCase();
-            renderGrid(novels.filter(n => (n.author || "").trim().toLowerCase() === pen), 'myPublishedGrid');
+            if (!currentUser) return;
+            renderGrid(novels.filter(n => n.author === userProfile.name), 'myPublishedGrid');
         }
 
-        switchView(localStorage.getItem('pocket_last_view') || 'exploreView');
+        switchView(localStorage.getItem('last_view') || 'exploreView');
     </script>
 </body>
 </html>
