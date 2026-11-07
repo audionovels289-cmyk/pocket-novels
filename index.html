@@ -588,7 +588,7 @@
           }
         }
 
-        // PERSISTENT AUTH STATE LISTENER & FIRESTORE PROFILE LOADER
+        // PERSISTENT AUTH STATE LISTENER WITH PROPER DOCUMENT INITIALIZATION
         firebase.auth().onAuthStateChanged(async (user) => {
             currentUser = user;
             const authBtn = document.getElementById('authBtn');
@@ -597,21 +597,29 @@
                 if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
                 
                 try {
-                    const docRef = db.collection("users").doc(user.uid).collection("appData").doc("userProfile");
-                    const doc = await docRef.get();
+                    const userDocRef = db.collection("users").doc(user.uid);
+                    const profileDocRef = userDocRef.collection("appData").doc("userProfile");
+                    
+                    const doc = await profileDocRef.get();
                     
                     if (doc.exists && doc.data().name) {
-                        // LOAD SAVED CUSTOM PROFILE FROM FIRESTORE
                         userProfile = doc.data();
                     } else {
-                        // FALLBACK TO GOOGLE PROFILE ONLY IF NO SAVED PROFILE EXISTS
                         userProfile = {
                             name: user.displayName || user.email.split('@')[0],
                             bio: "",
                             picture: user.photoURL || "",
                             facebookUrl: ""
                         };
-                        await docRef.set(userProfile, { merge: true });
+                        
+                        await userDocRef.set({
+                            email: user.email,
+                            name: userProfile.name,
+                            photoURL: userProfile.picture,
+                            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                        }, { merge: true });
+
+                        await profileDocRef.set(userProfile, { merge: true });
                     }
                 } catch (e) {
                     console.log("Profile fetch notice:", e);
@@ -801,10 +809,18 @@
             toggleEditProfile();
 
             try {
-                // Save securely to user's UID document path in Firestore
-                await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
+                // Save securely to both parent user document and appData profile sub-document
+                const userDocRef = db.collection("users").doc(currentUser.uid);
+                await userDocRef.set({
+                    email: currentUser.email,
+                    name: userProfile.name,
+                    photoURL: userProfile.picture,
+                    lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+
+                await userDocRef.collection("appData").doc("userProfile").set(userProfile, { merge: true });
                 
-                // Save globally in authorsDirectory so readers can view author profiles & books
+                // Save globally in authorsDirectory
                 await db.collection("authorsDirectory").doc(userProfile.name).set({
                     bio: userProfile.bio,
                     picture: userProfile.picture,
