@@ -588,7 +588,7 @@
           }
         }
 
-        // PERSISTENT AUTH STATE LISTENER WITH PROPER DOCUMENT INITIALIZATION
+        // PERSISTENT AUTH STATE LISTENER (PRIORITIZES SAVED FIRESTORE PROFILE DATA)
         firebase.auth().onAuthStateChanged(async (user) => {
             currentUser = user;
             const authBtn = document.getElementById('authBtn');
@@ -597,12 +597,11 @@
                 if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
                 
                 try {
-                    const userDocRef = db.collection("users").doc(user.uid);
-                    const profileDocRef = userDocRef.collection("appData").doc("userProfile");
-                    
+                    const profileDocRef = db.collection("users").doc(user.uid).collection("appData").doc("userProfile");
                     const doc = await profileDocRef.get();
                     
                     if (doc.exists && doc.data().name) {
+                        // LOAD SAVED CUSTOM PROFILE INSTEAD OF OVERWRITING WITH GOOGLE DEFAULTS
                         userProfile = doc.data();
                     } else {
                         userProfile = {
@@ -611,22 +610,10 @@
                             picture: user.photoURL || "",
                             facebookUrl: ""
                         };
-                        
-                        await userDocRef.set({
-                            email: user.email,
-                            name: userProfile.name,
-                            photoURL: userProfile.picture,
-                            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-                        }, { merge: true });
-
                         await profileDocRef.set(userProfile, { merge: true });
                     }
                 } catch (e) {
                     console.log("Profile fetch notice:", e);
-                    if (!userProfile.name) {
-                        userProfile.name = user.displayName || user.email.split('@')[0];
-                        userProfile.picture = user.photoURL || "";
-                    }
                 }
                 
                 saveToStorage();
@@ -809,7 +796,6 @@
             toggleEditProfile();
 
             try {
-                // Save securely to both parent user document and appData profile sub-document
                 const userDocRef = db.collection("users").doc(currentUser.uid);
                 await userDocRef.set({
                     email: currentUser.email,
@@ -820,7 +806,6 @@
 
                 await userDocRef.collection("appData").doc("userProfile").set(userProfile, { merge: true });
                 
-                // Save globally in authorsDirectory
                 await db.collection("authorsDirectory").doc(userProfile.name).set({
                     bio: userProfile.bio,
                     picture: userProfile.picture,
