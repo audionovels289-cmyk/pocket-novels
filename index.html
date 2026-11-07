@@ -76,7 +76,16 @@
         .studio-card { background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border-color); padding: 2rem; max-width: 800px; margin: 0 auto; }
         .form-group { margin-bottom: 1.5rem; }
         .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem; }
-        .form-control { width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; color: #fff; }
+        .form-control { width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; color: #fff; outline: none; }
+        .form-control:focus { border-color: var(--primary); }
+
+        /* CUSTOM DARK THEME DROPDOWN SELECTOR */
+        .custom-select-wrapper { position: relative; width: 100%; cursor: pointer; }
+        .custom-select-selected { background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; color: #fff; display: flex; justify-content: space-between; align-items: center; }
+        .custom-select-options { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; margin-top: 4px; z-index: 50; display: none; max-height: 200px; overflow-y: auto; box-shadow: 0 8px 20px rgba(0,0,0,0.5); }
+        .custom-select-options.open { display: block; }
+        .custom-select-option { padding: 10px 12px; color: var(--text-main); transition: background 0.2s; }
+        .custom-select-option:hover { background: var(--primary); color: #fff; }
 
         .file-upload-wrapper { border: 2px dashed var(--primary); padding: 1.5rem; text-align: center; border-radius: 12px; background: rgba(99, 102, 241, 0.05); cursor: pointer; margin-top: 6px; }
         .file-upload-wrapper input[type="file"] { display: none; }
@@ -280,31 +289,59 @@
         <section id="studioView" class="view-section">
             <div class="studio-card">
                 <h2><i class="fa-solid fa-pen-fancy"></i> Writer's Studio</h2>
-                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Create and publish a new novel directly to your app.</p>
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Create and publish a new novel globally for anyone to read.</p>
                 <form id="publishForm" onsubmit="handlePublishNovel(event)">
                     <div class="form-group">
                         <label>Novel Title</label>
                         <input type="text" id="pubTitle" class="form-control" placeholder="Enter book title" required>
                     </div>
+
+                    <!-- CUSTOM DARK THEME DROPDOWN: GENRE -->
                     <div class="form-group">
                         <label>Genre</label>
-                        <select id="pubGenre" class="form-control">
-                            <option>Fantasy</option><option>Romance</option><option>Action</option><option>Sci-Fi</option><option>Mystery</option>
-                        </select>
+                        <div class="custom-select-wrapper" onclick="toggleCustomDropdown('genreDropdown')">
+                            <div class="custom-select-selected" id="pubGenreSelected">Fantasy <i class="fa-solid fa-chevron-down"></i></div>
+                            <div class="custom-select-options" id="genreDropdown">
+                                <div class="custom-select-option" onclick="selectCustomOption('genre', 'Fantasy')">Fantasy</div>
+                                <div class="custom-select-option" onclick="selectCustomOption('genre', 'Romance')">Romance</div>
+                                <div class="custom-select-option" onclick="selectCustomOption('genre', 'Action')">Action</div>
+                                <div class="custom-select-option" onclick="selectCustomOption('genre', 'Sci-Fi')">Sci-Fi</div>
+                                <div class="custom-select-option" onclick="selectCustomOption('genre', 'Mystery')">Mystery</div>
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- CUSTOM DARK THEME DROPDOWN: LANGUAGE -->
                     <div class="form-group">
                         <label>Language</label>
-                        <select id="pubLanguage" class="form-control">
-                            <option>English</option><option>Urdu</option><option>Hindi</option><option>Korean</option><option>Chinese</option><option>Arabic</option><option>Spanish</option><option>Japanese</option><option>French</option>
-                        </select>
+                        <div class="custom-select-wrapper" onclick="toggleCustomDropdown('langDropdown')">
+                            <div class="custom-select-selected" id="pubLangSelected">English <i class="fa-solid fa-chevron-down"></i></div>
+                            <div class="custom-select-options" id="langDropdown">
+                                <div class="custom-select-option" onclick="selectCustomOption('lang', 'English')">English</div>
+                                <div class="custom-select-option" onclick="selectCustomOption('lang', 'Urdu')">Urdu</div>
+                                <div class="custom-select-option" onclick="selectCustomOption('lang', 'Hindi')">Hindi</div>
+                                <div class="custom-select-option" onclick="selectCustomOption('lang', 'Korean')">Korean</div>
+                                <div class="custom-select-option" onclick="selectCustomOption('lang', 'Chinese')">Chinese</div>
+                                <div class="custom-select-option" onclick="selectCustomOption('lang', 'Arabic')">Arabic</div>
+                                <div class="custom-select-option" onclick="selectCustomOption('lang', 'Spanish')">Spanish</div>
+                                <div class="custom-select-option" onclick="selectCustomOption('lang', 'Japanese')">Japanese</div>
+                                <div class="custom-select-option" onclick="selectCustomOption('lang', 'French')">French</div>
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- CUSTOM DARK THEME DROPDOWN: ALIGNMENT -->
                     <div class="form-group">
                         <label>Text Alignment / Direction</label>
-                        <select id="pubAlignment" class="form-control">
-                            <option value="ltr">Left-to-Right (English / Standard)</option>
-                            <option value="rtl">Right-to-Left (Urdu / Arabic)</option>
-                        </select>
+                        <div class="custom-select-wrapper" onclick="toggleCustomDropdown('alignDropdown')">
+                            <div class="custom-select-selected" id="pubAlignSelected">Left-to-Right (English / Standard) <i class="fa-solid fa-chevron-down"></i></div>
+                            <div class="custom-select-options" id="alignDropdown">
+                                <div class="custom-select-option" onclick="selectCustomOption('align', 'ltr', 'Left-to-Right (English / Standard)')">Left-to-Right (English / Standard)</div>
+                                <div class="custom-select-option" onclick="selectCustomOption('align', 'rtl', 'Right-to-Left (Urdu / Arabic)')">Right-to-Left (Urdu / Arabic)</div>
+                            </div>
+                        </div>
                     </div>
+
                     <div class="form-group">
                         <label>Book Cover Image</label>
                         <div class="file-upload-wrapper" onclick="document.getElementById('pubCoverFile').click()">
@@ -501,6 +538,42 @@
             };
         }
 
+        // Custom Dropdown State Variables
+        let selectedGenre = 'Fantasy';
+        let selectedLang = 'English';
+        let selectedAlign = 'ltr';
+
+        function toggleCustomDropdown(dropdownId) {
+            // Close all other dropdowns first
+            document.querySelectorAll('.custom-select-options').forEach(el => {
+                if (el.id !== dropdownId) el.classList.remove('open');
+            });
+            document.getElementById(dropdownId).classList.toggle('open');
+        }
+
+        function selectCustomOption(type, value, labelText = null) {
+            if (type === 'genre') {
+                selectedGenre = value;
+                document.getElementById('pubGenreSelected').innerHTML = `${value} <i class="fa-solid fa-chevron-down"></i>`;
+                document.getElementById('genreDropdown').classList.remove('open');
+            } else if (type === 'lang') {
+                selectedLang = value;
+                document.getElementById('pubLangSelected').innerHTML = `${value} <i class="fa-solid fa-chevron-down"></i>`;
+                document.getElementById('langDropdown').classList.remove('open');
+            } else if (type === 'align') {
+                selectedAlign = value;
+                document.getElementById('pubAlignSelected').innerHTML = `${labelText} <i class="fa-solid fa-chevron-down"></i>`;
+                document.getElementById('alignDropdown').classList.remove('open');
+            }
+        }
+
+        // Close dropdowns when clicking outside
+        window.onclick = function(event) {
+            if (!event.target.closest('.custom-select-wrapper')) {
+                document.querySelectorAll('.custom-select-options').forEach(el => el.classList.remove('open'));
+            }
+        };
+
         const defaultSampleNovels = [
             {
                 id: "1700000001001",
@@ -540,7 +613,7 @@
 
         applyFilters();
 
-        // REAL-TIME CLOUD SYNC FOR NOVELS & AUTHOR DIRECTORY
+        // REAL-TIME GLOBAL CLOUD SYNC FOR NOVELS & AUTHORS
         function initCloudData() {
           db.collection("publicNovels").onSnapshot(snapshot => {
               const cloudNovels = [];
@@ -549,7 +622,6 @@
               });
               
               if (cloudNovels.length > 0) {
-                  // Deduplicate novels by ID to prevent double cards
                   const uniqueMap = new Map();
                   cloudNovels.forEach(n => uniqueMap.set(String(n.id), n));
                   novels = Array.from(uniqueMap.values());
@@ -595,7 +667,6 @@
             if (user) {
                 if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
                 
-                // 1. INSTANT LOAD FROM LOCAL CACHE SO NO "GUEST USER" DELAY OCCURS
                 const localCache = localStorage.getItem('pocket_user_profile_' + user.uid);
                 if (localCache) {
                     userProfile = JSON.parse(localCache);
@@ -611,7 +682,6 @@
                     updateProfileUI();
                 }
                 
-                // 2. BACKGROUND SYNC WITH FIRESTORE
                 try {
                     const userDocRef = db.collection("users").doc(user.uid);
                     const profileDocRef = userDocRef.collection("appData").doc("userProfile");
@@ -1092,7 +1162,7 @@
             openNovelDetail(currentNovel.id);
         }
 
-        // PREVENT DOUBLE PUBLISHING WITH ISPUBLISHING GUARD
+        // GLOBALLY PUBLISH NOVEL WITH CUSTOM DROPDOWN VALUES & DUPLICATE GUARD
         async function handlePublishNovel(e) {
             e.preventDefault();
             if (!currentUser) {
@@ -1100,7 +1170,7 @@
                 document.getElementById('authModal').style.display = 'flex';
                 return;
             }
-            if (isPublishing) return; // Prevent double-click duplicates
+            if (isPublishing) return;
             if (!uploadedCoverDataUrl) {
                 showToast("Please select a book cover image.", "fa-triangle-exclamation");
                 return;
@@ -1110,7 +1180,7 @@
             const publishBtn = document.getElementById('publishBtn');
             if (publishBtn) publishBtn.disabled = true;
 
-            showToast("Publishing to cloud...", "fa-cloud-arrow-up");
+            showToast("Publishing globally to cloud...", "fa-cloud-arrow-up");
             const novelId = Date.now().toString();
             const authorName = userProfile.name || currentUser.displayName || "Author";
             
@@ -1121,9 +1191,9 @@
                 authorBio: userProfile.bio || "",
                 authorPic: userProfile.picture || "",
                 authorFb: userProfile.facebookUrl || "",
-                genre: document.getElementById('pubGenre').value,
-                language: document.getElementById('pubLanguage').value,
-                alignment: document.getElementById('pubAlignment').value,
+                genre: selectedGenre,
+                language: selectedLang,
+                alignment: selectedAlign,
                 cover: uploadedCoverDataUrl,
                 synopsis: document.getElementById('pubSynopsis').value,
                 views: 0,
@@ -1136,19 +1206,19 @@
             };
 
             try {
+                // Ensure global public write access
                 await db.collection("publicNovels").doc(novelId).set(newNovel);
                 
-                // Ensure unique array update
                 if (!novels.some(n => n.id === novelId)) {
                     novels.unshift(newNovel);
                 }
                 saveToStorage();
                 
-                showToast("Novel successfully published!", "fa-circle-check");
+                showToast("Novel successfully published globally!", "fa-circle-check");
                 document.getElementById('publishForm').reset();
                 document.getElementById('coverPreview').style.display = 'none';
                 uploadedCoverDataUrl = "";
-                switchView('profileView', true);
+                switchView('exploreView', true);
             } catch (err) {
                 console.error("Publish error:", err);
                 showToast("Failed to publish. Check Firestore Rules.", "fa-triangle-exclamation");
