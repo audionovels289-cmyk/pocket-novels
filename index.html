@@ -544,7 +544,6 @@
         let selectedAlign = 'ltr';
 
         function toggleCustomDropdown(dropdownId) {
-            // Close all other dropdowns first
             document.querySelectorAll('.custom-select-options').forEach(el => {
                 if (el.id !== dropdownId) el.classList.remove('open');
             });
@@ -567,7 +566,6 @@
             }
         }
 
-        // Close dropdowns when clicking outside
         window.onclick = function(event) {
             if (!event.target.closest('.custom-select-wrapper')) {
                 document.querySelectorAll('.custom-select-options').forEach(el => el.classList.remove('open'));
@@ -1162,7 +1160,7 @@
             openNovelDetail(currentNovel.id);
         }
 
-        // GLOBALLY PUBLISH NOVEL WITH CUSTOM DROPDOWN VALUES & DUPLICATE GUARD
+        // INSTANT & GLOBAL PUBLISHING
         async function handlePublishNovel(e) {
             e.preventDefault();
             if (!currentUser) {
@@ -1206,13 +1204,13 @@
             };
 
             try {
-                // Ensure global public write access
                 await db.collection("publicNovels").doc(novelId).set(newNovel);
                 
                 if (!novels.some(n => n.id === novelId)) {
                     novels.unshift(newNovel);
                 }
                 saveToStorage();
+                applyFilters(); // Instantly update view
                 
                 showToast("Novel successfully published globally!", "fa-circle-check");
                 document.getElementById('publishForm').reset();
