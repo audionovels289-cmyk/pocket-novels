@@ -21,6 +21,7 @@
             --text-muted: #94a3b8;
             --border-color: rgba(255, 255, 255, 0.1);
             --gradient-primary: linear-gradient(135deg, #6366f1 0%, #ec4899 100%);
+            --radius-md: 14px;
             --radius-lg: 20px;
             --reader-bg: #121212;
             --reader-text: #e0e0e0;
@@ -62,7 +63,7 @@
 
         .genre-filters { display: flex; gap: 8px; overflow-x: auto; padding: 0.5rem 0 1.2rem 0; white-space: nowrap; scrollbar-width: none; }
         .genre-filters::-webkit-scrollbar { display: none; }
-        .genre-tab { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-muted); padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; cursor: pointer; flex-shrink: 0; }
+        .genre-tab { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-muted); padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; cursor: pointer; flex-shrink: 0; transition: all 0.2s; }
         .genre-tab.active { background: var(--gradient-primary); color: #fff; border-color: transparent; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
 
         .btn { background: var(--gradient-primary); color: #fff; border: none; padding: 10px 22px; border-radius: 20px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
@@ -739,6 +740,16 @@
             const isBookmarked = savedBookmarks.includes(id);
             const isAuthor = currentUser && userProfile.name && (currentNovel.author || "").trim().toLowerCase() === userProfile.name.trim().toLowerCase();
 
+            const commentsHtml = (currentNovel.comments || []).map(c => `
+                <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 15px; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <strong style="font-size: 0.9rem; color: var(--primary-light);">${c.author || 'Reader'}</strong>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">${c.date || ''}</span>
+                    </div>
+                    <p style="font-size: 0.9rem; color: var(--text-main); margin: 0; line-height: 1.4;">${c.text}</p>
+                </div>
+            `).join('') || '<p style="color: var(--text-muted); font-size: 0.85rem;">No comments yet.</p>';
+
             document.getElementById('detailContainer').innerHTML = `
                 <h2>${currentNovel.title}</h2>
                 <p style="margin-bottom: 0.5rem;">By <span style="color: var(--primary-light); cursor: pointer; text-decoration: underline;" onclick="openAuthorProfile('${currentNovel.id}')">${currentNovel.author}</span> • <span style="background: rgba(99,102,241,0.2); padding: 2px 8px; border-radius: 4px;">${currentNovel.genre}</span></p>
@@ -749,12 +760,24 @@
                 <div style="display: flex; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap;">
                     <button class="btn" onclick="startReading(0)"><i class="fa-solid fa-book-open"></i> Read</button>
                     <button class="btn btn-secondary" onclick="toggleBookmark('${currentNovel.id}')"><i class="fa-solid fa-bookmark"></i> ${isBookmarked ? 'Bookmarked' : 'Bookmark'}</button>
+                    <button class="btn btn-secondary" onclick="shareNovel('${currentNovel.title}', '${currentNovel.author}')"><i class="fa-solid fa-share-nodes"></i> Share</button>
                     ${isAuthor ? `<button class="btn btn-success" onclick="openAddChapterModal()"><i class="fa-solid fa-plus"></i> Add Chapter</button><button class="btn btn-danger" onclick="confirmDeleteNovel('${currentNovel.id}')"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
                 </div>
 
                 <h3>Chapters (${currentNovel.chapters.length})</h3>
                 <div style="margin-top: 10px; margin-bottom: 2rem;">
                     ${currentNovel.chapters.map((ch, idx) => `<div style="background: var(--bg-card); padding: 12px; border-radius: 8px; margin-bottom: 8px; cursor: pointer;" onclick="startReading(${idx})">${ch.title}</div>`).join('')}
+                </div>
+
+                <div class="comments-section" style="margin-top: 2rem;">
+                    <h3><i class="fa-solid fa-comments"></i> Reader Comments (${(currentNovel.comments || []).length})</h3>
+                    <form onsubmit="handleAddComment(event)" style="margin: 1rem 0;">
+                        <div class="form-group" style="margin-bottom: 0.8rem;">
+                            <input type="text" id="commentTextInput" class="form-control" placeholder="Write a comment..." required>
+                        </div>
+                        <button type="submit" class="btn btn-secondary" style="padding: 6px 16px; font-size: 0.85rem;"><i class="fa-solid fa-paper-plane"></i> Post Comment</button>
+                    </form>
+                    <div id="commentsContainer">${commentsHtml}</div>
                 </div>
             `;
             switchView('detailView');
@@ -768,6 +791,32 @@
                     switchView('exploreView', true);
                 } catch(e) { showToast("Failed to delete.", "fa-triangle-exclamation"); }
             });
+        }
+
+        function shareNovel(title, author) {
+            const shareData = { title: title, text: `Check out "${title}" by ${author} on Pocket Novels!`, url: window.location.href };
+            if (navigator.share) { navigator.share(shareData).catch(() => {}); }
+            else { navigator.clipboard.writeText(window.location.href); showToast("Link copied to clipboard!", "fa-circle-check"); }
+        }
+
+        async function handleAddComment(e) {
+            e.preventDefault();
+            const textInput = document.getElementById('commentTextInput');
+            if(!textInput.value.trim()) return;
+
+            const commenterName = userProfile.name ? userProfile.name : "Guest Reader";
+            if(!currentNovel.comments) currentNovel.comments = [];
+            currentNovel.comments.unshift({
+                author: commenterName,
+                text: textInput.value.trim(),
+                date: new Date().toLocaleDateString()
+            });
+
+            try {
+                await db.collection("publicNovels").doc(String(currentNovel.id)).update({ comments: currentNovel.comments });
+                showToast("Comment posted!", "fa-circle-check");
+                openNovelDetail(currentNovel.id);
+            } catch (err) { showToast("Failed to post comment.", "fa-triangle-exclamation"); }
         }
 
         async function handlePublishNovel(e) {
