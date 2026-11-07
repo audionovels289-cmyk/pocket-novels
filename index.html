@@ -227,7 +227,10 @@
 
     <main>
         <section id="exploreView" class="view-section active">
-            <h2>Published Novels</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <h2 style="margin:0;">Published Novels</h2>
+                <button class="btn btn-secondary" onclick="forceManualRefresh()" style="padding: 6px 14px; font-size: 0.8rem;"><i class="fa-solid fa-rotate"></i> Refresh Feed</button>
+            </div>
             <div class="genre-filters">
                 <button class="genre-tab active" onclick="filterByGenre('All', this)">All</button>
                 <button class="genre-tab" onclick="filterByGenre('Fantasy', this)">Fantasy</button>
@@ -494,7 +497,6 @@
             }
         };
 
-        // Clean initial state without sample novels
         let cachedNovels = localStorage.getItem('pocket_novels_cache');
         let novels = cachedNovels ? JSON.parse(cachedNovels) : [];
         let savedBookmarks = JSON.parse(localStorage.getItem('pocket_bookmarks')) || [];
@@ -511,7 +513,7 @@
 
         applyFilters();
 
-        // LIVE FIRESTORE CLOUD SYNC
+        // LIVE FIRESTORE CLOUD SYNC WITH MANUAL FORCE REFRESH SUPPORT
         function initCloudSync() {
             db.collection("publicNovels").onSnapshot(snapshot => {
                 const cloudNovels = [];
@@ -525,12 +527,35 @@
                 applyFilters();
                 renderLibrary();
                 renderProfileBooks();
-            }, err => console.error("Cloud sync error:", err));
+            }, err => {
+                console.error("Cloud sync error:", err);
+                showToast("Connection issue. Tap Refresh Feed.", "fa-triangle-exclamation");
+            });
 
             db.collection("authorsDirectory").onSnapshot(snapshot => {
                 snapshot.forEach(doc => { authorBios[doc.id] = doc.data(); });
                 localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
             });
+        }
+
+        async function forceManualRefresh() {
+            showToast("Syncing with cloud...", "fa-rotate");
+            try {
+                const snapshot = await db.collection("publicNovels").get();
+                const cloudNovels = [];
+                snapshot.forEach(doc => {
+                    cloudNovels.push({ id: doc.id, ...doc.data() });
+                });
+                novels = cloudNovels;
+                novels.sort((a, b) => Number(b.id) - Number(a.id));
+                localStorage.setItem('pocket_novels_cache', JSON.stringify(novels));
+                applyFilters();
+                renderLibrary();
+                renderProfileBooks();
+                showToast("Feed updated successfully!", "fa-circle-check");
+            } catch (e) {
+                showToast("Failed to refresh. Check internet.", "fa-triangle-exclamation");
+            }
         }
 
         initCloudSync();
