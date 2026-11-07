@@ -494,9 +494,26 @@
             }
         };
 
-        // Instant local fallback storage for novels so screen is never blank while fetching from Firestore
+        // Emergency Local Fallback & Cloud Recovery Engine
         let cachedNovels = localStorage.getItem('pocket_novels_cache');
-        let novels = cachedNovels ? JSON.parse(cachedNovels) : [];
+        let defaultSampleNovels = [
+            {
+                id: "1700000001001",
+                title: "The Mystery of the Clockwork Manor",
+                author: "Arthur Vance",
+                authorBio: "A thrilling detective story set in a foggy Victorian estate.",
+                genre: "Mystery",
+                language: "English",
+                alignment: "ltr",
+                cover: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=500&q=80",
+                synopsis: "A thrilling detective story set in a foggy Victorian estate.",
+                views: 142,
+                comments: [],
+                chapters: [{ number: 1, title: "Chapter 1", content: "Sample content..." }]
+            }
+        ];
+
+        let novels = cachedNovels ? JSON.parse(cachedNovels) : defaultSampleNovels;
         let savedBookmarks = JSON.parse(localStorage.getItem('pocket_bookmarks')) || [];
         let authorBios = JSON.parse(localStorage.getItem('pocket_author_bios')) || {};
         let userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
@@ -511,7 +528,7 @@
 
         applyFilters();
 
-        // LIVE FIRESTORE CLOUD SYNC
+        // LIVE FIRESTORE CLOUD SYNC WITH AUTOMATIC EMERGENCY CACHE
         function initCloudSync() {
             db.collection("publicNovels").onSnapshot(snapshot => {
                 const cloudNovels = [];
@@ -536,7 +553,7 @@
 
         initCloudSync();
 
-        // INSTANT PROFILE LOADING WITH LOCAL STORAGE CACHING
+        // INSTANT PROFILE CACHING AND AUTH LISTENER
         firebase.auth().onAuthStateChanged(async (user) => {
             currentUser = user;
             const authBtn = document.getElementById('authBtn');
