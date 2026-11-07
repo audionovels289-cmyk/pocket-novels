@@ -494,9 +494,11 @@
             }
         };
 
-        let novels = [];
+        // Instant local fallback storage for novels so screen is never blank while fetching from Firestore
+        let cachedNovels = localStorage.getItem('pocket_novels_cache');
+        let novels = cachedNovels ? JSON.parse(cachedNovels) : [];
         let savedBookmarks = JSON.parse(localStorage.getItem('pocket_bookmarks')) || [];
-        let authorBios = {};
+        let authorBios = JSON.parse(localStorage.getItem('pocket_author_bios')) || {};
         let userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
 
         let currentGenreFilter = 'All';
@@ -507,14 +509,20 @@
         let currentUser = null;
         let isPublishing = false;
 
-        // LIVE FIRESTORE CLOUD LISTENER (Single Source of Truth)
+        applyFilters();
+
+        // LIVE FIRESTORE CLOUD SYNC
         function initCloudSync() {
             db.collection("publicNovels").onSnapshot(snapshot => {
-                novels = [];
+                const cloudNovels = [];
                 snapshot.forEach(doc => {
-                    novels.push({ id: doc.id, ...doc.data() });
+                    cloudNovels.push({ id: doc.id, ...doc.data() });
                 });
-                novels.sort((a, b) => Number(b.id) - Number(a.id));
+                if (cloudNovels.length > 0) {
+                    novels = cloudNovels;
+                    novels.sort((a, b) => Number(b.id) - Number(a.id));
+                    localStorage.setItem('pocket_novels_cache', JSON.stringify(novels));
+                }
                 applyFilters();
                 renderLibrary();
                 renderProfileBooks();
@@ -522,26 +530,36 @@
 
             db.collection("authorsDirectory").onSnapshot(snapshot => {
                 snapshot.forEach(doc => { authorBios[doc.id] = doc.data(); });
+                localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
             });
         }
 
         initCloudSync();
 
+        // INSTANT PROFILE LOADING WITH LOCAL STORAGE CACHING
         firebase.auth().onAuthStateChanged(async (user) => {
             currentUser = user;
             const authBtn = document.getElementById('authBtn');
             if (user) {
                 if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
+                
+                const localCache = localStorage.getItem('pocket_user_profile_' + user.uid);
+                if (localCache) {
+                    userProfile = JSON.parse(localCache);
+                    updateProfileUI();
+                    renderProfileBooks();
+                } else {
+                    userProfile = { name: user.displayName || user.email.split('@')[0], bio: "", picture: user.photoURL || "", facebookUrl: "" };
+                    updateProfileUI();
+                }
+
                 try {
                     const doc = await db.collection("users").doc(user.uid).collection("appData").doc("userProfile").get();
                     if (doc.exists && doc.data().name) {
                         userProfile = doc.data();
-                    } else {
-                        userProfile = { name: user.displayName || user.email.split('@')[0], bio: "", picture: user.photoURL || "", facebookUrl: "" };
+                        localStorage.setItem('pocket_user_profile_' + user.uid, JSON.stringify(userProfile));
                     }
-                } catch(e) {
-                    userProfile = { name: user.displayName || user.email.split('@')[0], bio: "", picture: user.photoURL || "", facebookUrl: "" };
-                }
+                } catch(e) {}
                 updateProfileUI();
                 renderProfileBooks();
             } else {
@@ -622,6 +640,7 @@
             userProfile.facebookUrl = document.getElementById('editSocialInput').value.trim();
 
             try {
+                localStorage.setItem('pocket_user_profile_' + currentUser.uid, JSON.stringify(userProfile));
                 await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
                 await db.collection("authorsDirectory").doc(userProfile.name).set({ bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl }, { merge: true });
                 updateProfileUI();
