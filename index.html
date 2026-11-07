@@ -469,18 +469,20 @@
         let currentUser = null;
         let isPublishing = false;
 
-        // DIRECT FIREBASE SYNC
+        // DIRECT FIREBASE SYNC (Guaranteed Feed Retention)
         function initCloudSync() {
             db.collection("publicNovels").onSnapshot(snapshot => {
                 const cloudNovels = [];
                 snapshot.forEach(doc => {
                     cloudNovels.push({ id: doc.id, ...doc.data() });
                 });
-                novels = cloudNovels;
-                novels.sort((a, b) => Number(b.id) - Number(a.id));
-                applyFilters();
-                renderLibrary();
-                renderProfileBooks();
+                if (cloudNovels.length > 0 || novels.length === 0) {
+                    novels = cloudNovels;
+                    novels.sort((a, b) => Number(b.id) - Number(a.id));
+                    applyFilters();
+                    renderLibrary();
+                    renderProfileBooks();
+                }
             }, err => console.error("Cloud sync error:", err));
 
             db.collection("authorsDirectory").onSnapshot(snapshot => {
@@ -509,14 +511,15 @@
 
         initCloudSync();
 
-        // PROFILE & AUTHENTICATION
+        // PERSISTENT AUTH & PROFILE SYNC LISTENER
         firebase.auth().onAuthStateChanged(async (user) => {
             currentUser = user;
             const authBtn = document.getElementById('authBtn');
+            
             if (user) {
                 if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
                 
-                // Default to Google info on first sign-in
+                // Base fallback profile from Google credentials
                 userProfile = { 
                     name: user.displayName || user.email.split('@')[0], 
                     bio: "", 
@@ -524,12 +527,19 @@
                     facebookUrl: "" 
                 };
 
+                // Fetch stored custom profile from Firestore to prevent overrides
                 try {
-                    const doc = await db.collection("users").doc(user.uid).collection("appData").doc("userProfile").get();
-                    if (doc.exists && doc.data().name) {
-                        userProfile = doc.data(); // Load customized profile if saved
+                    const docRef = db.collection("users").doc(user.uid).collection("appData").doc("userProfile");
+                    const docSnap = await docRef.get();
+                    if (docSnap.exists && docSnap.data().name) {
+                        userProfile = docSnap.data();
+                    } else {
+                        // Initialize first-time profile in Firestore so it persists permanently
+                        await docRef.set(userProfile, { merge: true });
                     }
-                } catch(e) {}
+                } catch(e) {
+                    console.error("Profile fetch error:", e);
+                }
                 
                 updateProfileUI();
                 renderProfileBooks();
