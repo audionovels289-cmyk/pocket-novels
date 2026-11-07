@@ -527,6 +527,7 @@
         let savedBookmarks = JSON.parse(localStorage.getItem('pocket_bookmarks')) || [];
         let authorBios = JSON.parse(localStorage.getItem('pocket_author_bios')) || {};
         
+        // Initialize profile from local storage cache instantly
         let userProfile = JSON.parse(localStorage.getItem('pocket_user_profile')) || {
             name: "",
             bio: "",
@@ -588,7 +589,7 @@
           }
         }
 
-        // BULLETPROOF AUTH STATE CHANGE LISTENER & FIRESTORE PROFILE LOADER
+        // BULLETPROOF AUTH STATE CHANGE & FIRESTORE PROFILE LOADER (PREVENTS GOOGLE OVERWRITE)
         firebase.auth().onAuthStateChanged(async (user) => {
             currentUser = user;
             const authBtn = document.getElementById('authBtn');
@@ -597,30 +598,21 @@
                 if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
                 
                 try {
-                    // Pull profile directly from Firestore using UID
+                    // Check if a saved profile document already exists in Firestore for this exact UID
                     const docRef = db.collection("users").doc(user.uid).collection("appData").doc("userProfile");
                     const doc = await docRef.get();
                     
                     if (doc.exists && doc.data().name) {
+                        // LOAD SAVED CUSTOM PROFILE (Preserves your custom name, bio, DP, links)
                         userProfile = doc.data();
                     } else {
-                        // Check if author data exists in authorsDirectory under display name
-                        const authorDoc = await db.collection("authorsDirectory").doc(user.displayName || "").get();
-                        if (authorDoc.exists) {
-                            userProfile = {
-                                name: user.displayName,
-                                bio: authorDoc.data().bio || "",
-                                picture: authorDoc.data().picture || user.photoURL || "",
-                                facebookUrl: authorDoc.data().facebookUrl || ""
-                            };
-                        } else {
-                            userProfile = {
-                                name: user.displayName || user.email.split('@')[0],
-                                bio: "",
-                                picture: user.photoURL || "",
-                                facebookUrl: ""
-                            };
-                        }
+                        // FIRST TIME SIGN-IN ONLY: Set up initial Google fallback profile
+                        userProfile = {
+                            name: user.displayName || user.email.split('@')[0],
+                            bio: "",
+                            picture: user.photoURL || "",
+                            facebookUrl: ""
+                        };
                         await docRef.set(userProfile, { merge: true });
                     }
                 } catch (e) {
