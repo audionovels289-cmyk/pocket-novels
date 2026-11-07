@@ -469,29 +469,8 @@
         let currentUser = null;
         let isPublishing = false;
 
-        // DIRECT FIREBASE SYNC (Guaranteed Feed Retention)
-        function initCloudSync() {
-            db.collection("publicNovels").onSnapshot(snapshot => {
-                const cloudNovels = [];
-                snapshot.forEach(doc => {
-                    cloudNovels.push({ id: doc.id, ...doc.data() });
-                });
-                if (cloudNovels.length > 0 || novels.length === 0) {
-                    novels = cloudNovels;
-                    novels.sort((a, b) => Number(b.id) - Number(a.id));
-                    applyFilters();
-                    renderLibrary();
-                    renderProfileBooks();
-                }
-            }, err => console.error("Cloud sync error:", err));
-
-            db.collection("authorsDirectory").onSnapshot(snapshot => {
-                snapshot.forEach(doc => { authorBios[doc.id] = doc.data(); });
-            });
-        }
-
-        async function forceManualRefresh() {
-            showToast("Syncing with cloud...", "fa-rotate");
+        // BULLETPROOF DIRECT FETCH SYNC (Direct .get() instead of failing listeners)
+        async function fetchNovelsFromCloud() {
             try {
                 const snapshot = await db.collection("publicNovels").get();
                 const cloudNovels = [];
@@ -503,15 +482,21 @@
                 applyFilters();
                 renderLibrary();
                 renderProfileBooks();
-                showToast("Feed updated successfully!", "fa-circle-check");
-            } catch (e) {
-                showToast("Failed to refresh.", "fa-triangle-exclamation");
+            } catch (err) {
+                console.error("Fetch error:", err);
             }
         }
 
-        initCloudSync();
+        function forceManualRefresh() {
+            showToast("Refreshing feed...", "fa-rotate");
+            fetchNovelsFromCloud().then(() => {
+                showToast("Feed updated!", "fa-circle-check");
+            });
+        }
 
-        // PERSISTENT AUTH & PROFILE SYNC LISTENER
+        fetchNovelsFromCloud();
+
+        // PERSISTENT AUTH & PROFILE LOADER
         firebase.auth().onAuthStateChanged(async (user) => {
             currentUser = user;
             const authBtn = document.getElementById('authBtn');
@@ -519,7 +504,7 @@
             if (user) {
                 if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
                 
-                // Base fallback profile from Google credentials
+                // Set default from Google auth credentials immediately so UI updates instantly
                 userProfile = { 
                     name: user.displayName || user.email.split('@')[0], 
                     bio: "", 
@@ -527,19 +512,16 @@
                     facebookUrl: "" 
                 };
 
-                // Fetch stored custom profile from Firestore to prevent overrides
+                // Load custom profile saved in Firestore if available
                 try {
                     const docRef = db.collection("users").doc(user.uid).collection("appData").doc("userProfile");
                     const docSnap = await docRef.get();
                     if (docSnap.exists && docSnap.data().name) {
                         userProfile = docSnap.data();
                     } else {
-                        // Initialize first-time profile in Firestore so it persists permanently
                         await docRef.set(userProfile, { merge: true });
                     }
-                } catch(e) {
-                    console.error("Profile fetch error:", e);
-                }
+                } catch(e) {}
                 
                 updateProfileUI();
                 renderProfileBooks();
@@ -553,7 +535,9 @@
 
         function handleAuthClick() {
             if (currentUser) {
-                showConfirmModal("Sign Out", "Are you sure you want to sign out?", () => firebase.auth().signOut());
+                showConfirmModal("Sign Out", "Are you sure you want to sign out?", () => {
+                    firebase.auth().signOut().then(() => window.location.reload());
+                });
             } else {
                 document.getElementById('authModal').style.display = 'flex';
             }
@@ -658,7 +642,7 @@
             if(viewId === 'exploreView') document.getElementById('navExplore').classList.add('active');
             if(viewId === 'libraryView') document.getElementById('navLibrary').classList.add('active');
             if(viewId === 'studioView') document.getElementById('navStudio').classList.add('active');
-            if(viewId === 'exploreView') applyFilters();
+            if(viewId === 'exploreView') { fetchNovelsFromCloud(); applyFilters(); }
             if(viewId === 'libraryView') renderLibrary();
             if(viewId === 'profileView') renderProfileBooks();
             if(saveState) localStorage.setItem('pocket_last_view', viewId);
@@ -687,7 +671,7 @@
             const grid = document.getElementById(targetId);
             if(!grid) return;
             if(dataset.length === 0) {
-                grid.innerHTML = `<p style="color: var(--text-muted); grid-column: 1/-1;">No novels found.</p>`;
+                grid.innerHTML = `<p style="color: var(--text-muted); grid-column: 1/-1;">No novels found in database.</p>`;
                 return;
             }
             grid.innerHTML = dataset.map(n => `
@@ -713,18 +697,14 @@
             const novel = novels.find(n => n.id == novelId);
             if (!novel) return;
             const authorName = novel.author || "Unknown";
-            const bioText = novel.authorBio || authorBios[authorName]?.bio || "Author on Pocket Novels.";
-            const picUrl = novel.authorPic || authorBios[authorName]?.picture || "";
-            const fbUrl = novel.authorFb || authorBios[authorName]?.facebookUrl || "";
-
             document.getElementById('publicAuthorName').innerText = authorName;
-            document.getElementById('publicAuthorBio').innerText = bioText;
+            document.getElementById('publicAuthorBio').innerText = novel.authorBio || "Author on Pocket Novels.";
             
             const picContainer = document.getElementById('publicAuthorPic');
-            if (picUrl) picContainer.innerHTML = `<img src="${picUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+            if (novel.authorPic) picContainer.innerHTML = `<img src="${novel.authorPic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
             else picContainer.innerHTML = `<span>${authorName.substring(0, 2).toUpperCase()}</span>`;
 
-            document.getElementById('publicAuthorSocialDisplay').innerHTML = fbUrl ? `<a href="${fbUrl}" target="_blank" style="color: #38bdf8; text-decoration: none;"><i class="fa-brands fa-facebook"></i> Facebook</a>` : '';
+            document.getElementById('publicAuthorSocialDisplay').innerHTML = novel.authorFb ? `<a href="${novel.authorFb}" target="_blank" style="color: #38bdf8; text-decoration: none;"><i class="fa-brands fa-facebook"></i> Facebook</a>` : '';
             renderGrid(novels.filter(n => (n.author || "").trim().toLowerCase() === authorName.trim().toLowerCase()), 'publicAuthorBooksGrid');
             switchView('authorPublicView');
         }
@@ -787,6 +767,7 @@
                 try {
                     await db.collection("publicNovels").doc(String(id)).delete();
                     showToast("Novel deleted.", "fa-circle-check");
+                    fetchNovelsFromCloud();
                     switchView('exploreView', true);
                 } catch(e) { showToast("Failed to delete.", "fa-triangle-exclamation"); }
             });
@@ -853,6 +834,7 @@
                 document.getElementById('publishForm').reset();
                 document.getElementById('coverPreview').style.display = 'none';
                 uploadedCoverDataUrl = "";
+                fetchNovelsFromCloud();
                 switchView('exploreView', true);
             } catch (err) {
                 showToast("Publish failed.", "fa-triangle-exclamation");
@@ -876,6 +858,7 @@
                 await db.collection("publicNovels").doc(String(currentNovel.id)).update({ chapters: currentNovel.chapters });
                 closeAddChapterModal();
                 showToast("Chapter added!", "fa-circle-check");
+                fetchNovelsFromCloud();
                 openNovelDetail(currentNovel.id);
             } catch(e) { showToast("Failed to add chapter.", "fa-triangle-exclamation"); }
         }
