@@ -527,7 +527,6 @@
         let savedBookmarks = JSON.parse(localStorage.getItem('pocket_bookmarks')) || [];
         let authorBios = JSON.parse(localStorage.getItem('pocket_author_bios')) || {};
         
-        // Initialize profile from local storage cache instantly
         let userProfile = JSON.parse(localStorage.getItem('pocket_user_profile')) || {
             name: "",
             bio: "",
@@ -589,7 +588,7 @@
           }
         }
 
-        // BULLETPROOF AUTH STATE CHANGE & FIRESTORE PROFILE LOADER (PREVENTS GOOGLE OVERWRITE)
+        // PERSISTENT AUTH STATE LISTENER & FIRESTORE PROFILE LOADER
         firebase.auth().onAuthStateChanged(async (user) => {
             currentUser = user;
             const authBtn = document.getElementById('authBtn');
@@ -598,15 +597,14 @@
                 if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
                 
                 try {
-                    // Check if a saved profile document already exists in Firestore for this exact UID
                     const docRef = db.collection("users").doc(user.uid).collection("appData").doc("userProfile");
                     const doc = await docRef.get();
                     
                     if (doc.exists && doc.data().name) {
-                        // LOAD SAVED CUSTOM PROFILE (Preserves your custom name, bio, DP, links)
+                        // LOAD SAVED CUSTOM PROFILE FROM FIRESTORE
                         userProfile = doc.data();
                     } else {
-                        // FIRST TIME SIGN-IN ONLY: Set up initial Google fallback profile
+                        // FALLBACK TO GOOGLE PROFILE ONLY IF NO SAVED PROFILE EXISTS
                         userProfile = {
                             name: user.displayName || user.email.split('@')[0],
                             bio: "",
