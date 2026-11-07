@@ -1160,7 +1160,7 @@
             openNovelDetail(currentNovel.id);
         }
 
-        // INSTANT & GLOBAL PUBLISHING
+        // INSTANT & GLOBAL PUBLISHING (Safely merging with existing novels array)
         async function handlePublishNovel(e) {
             e.preventDefault();
             if (!currentUser) {
@@ -1206,8 +1206,9 @@
             try {
                 await db.collection("publicNovels").doc(novelId).set(newNovel);
                 
+                // Safely prepend new novel while preserving all existing ones in memory
                 if (!novels.some(n => n.id === novelId)) {
-                    novels.unshift(newNovel);
+                    novels = [newNovel, ...novels.filter(n => n.id !== novelId)];
                 }
                 saveToStorage();
                 applyFilters(); // Instantly update view
