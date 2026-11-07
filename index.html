@@ -544,7 +544,7 @@
 
         applyFilters();
 
-        // INSTANT REAL-TIME CLOUD LISTENER (SYNCING ACROSS ALL BROWSERS)
+        // REAL-TIME CLOUD SYNC FOR NOVELS & AUTHOR DIRECTORY
         function initCloudData() {
           db.collection("publicNovels").onSnapshot(snapshot => {
               const cloudNovels = [];
@@ -588,28 +588,39 @@
           }
         }
 
-        // PERSISTENT AUTH STATE CHANGE LISTENER (LOADS STORED PROFILE WITHOUT OVERWRITING WITH GOOGLE DEFAULTS)
+        // BULLETPROOF AUTH STATE CHANGE LISTENER & FIRESTORE PROFILE LOADER
         firebase.auth().onAuthStateChanged(async (user) => {
             currentUser = user;
             const authBtn = document.getElementById('authBtn');
 
             if (user) {
                 if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
+                
                 try {
+                    // Pull profile directly from Firestore using UID
                     const docRef = db.collection("users").doc(user.uid).collection("appData").doc("userProfile");
                     const doc = await docRef.get();
                     
                     if (doc.exists && doc.data().name) {
-                        // Keeps previously saved custom profile data intact across logouts & logins
                         userProfile = doc.data();
                     } else {
-                        // First-time fallback configuration
-                        userProfile = {
-                            name: user.displayName || user.email.split('@')[0],
-                            bio: "",
-                            picture: user.photoURL || "",
-                            facebookUrl: ""
-                        };
+                        // Check if author data exists in authorsDirectory under display name
+                        const authorDoc = await db.collection("authorsDirectory").doc(user.displayName || "").get();
+                        if (authorDoc.exists) {
+                            userProfile = {
+                                name: user.displayName,
+                                bio: authorDoc.data().bio || "",
+                                picture: authorDoc.data().picture || user.photoURL || "",
+                                facebookUrl: authorDoc.data().facebookUrl || ""
+                            };
+                        } else {
+                            userProfile = {
+                                name: user.displayName || user.email.split('@')[0],
+                                bio: "",
+                                picture: user.photoURL || "",
+                                facebookUrl: ""
+                            };
+                        }
                         await docRef.set(userProfile, { merge: true });
                     }
                 } catch (e) {
@@ -619,6 +630,7 @@
                         userProfile.picture = user.photoURL || "";
                     }
                 }
+                
                 saveToStorage();
                 updateProfileUI();
                 renderProfileBooks();
@@ -781,6 +793,11 @@
 
         async function handleSaveProfile(e) {
             e.preventDefault();
+            if (!currentUser) {
+                showToast("Please sign in first.", "fa-triangle-exclamation");
+                return;
+            }
+
             const oldName = userProfile.name;
             userProfile.name = document.getElementById('editNameInput').value.trim();
             userProfile.bio = document.getElementById('editBioInput').value;
@@ -793,38 +810,40 @@
             updateProfileUI();
             toggleEditProfile();
 
-            if (currentUser) {
-                try {
-                    await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
-                    await db.collection("authorsDirectory").doc(userProfile.name).set({
-                        bio: userProfile.bio,
-                        picture: userProfile.picture,
-                        facebookUrl: userProfile.facebookUrl
-                    }, { merge: true });
+            try {
+                // Save securely to user's UID document path in Firestore
+                await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
+                
+                // Save globally in authorsDirectory so readers can view author profiles & books
+                await db.collection("authorsDirectory").doc(userProfile.name).set({
+                    bio: userProfile.bio,
+                    picture: userProfile.picture,
+                    facebookUrl: userProfile.facebookUrl
+                }, { merge: true });
 
-                    const batch = db.batch();
-                    novels.forEach(n => {
-                        if ((n.author || "").trim().toLowerCase() === oldName.trim().toLowerCase() || (currentUser.displayName && (n.author || "").trim().toLowerCase() === currentUser.displayName.trim().toLowerCase())) {
-                            n.author = userProfile.name;
-                            n.authorBio = userProfile.bio;
-                            n.authorPic = userProfile.picture;
-                            n.authorFb = userProfile.facebookUrl;
-                            const docRef = db.collection("publicNovels").doc(String(n.id));
-                            batch.update(docRef, {
-                                author: userProfile.name,
-                                authorBio: userProfile.bio,
-                                authorPic: userProfile.picture,
-                                authorFb: userProfile.facebookUrl
-                            });
-                        }
-                    });
-                    await batch.commit();
-                    saveToStorage();
-                } catch(err) {
-                    console.log("Cloud profile sync notice:", err);
-                }
+                const batch = db.batch();
+                novels.forEach(n => {
+                    if ((n.author || "").trim().toLowerCase() === oldName.trim().toLowerCase() || (currentUser.displayName && (n.author || "").trim().toLowerCase() === currentUser.displayName.trim().toLowerCase())) {
+                        n.author = userProfile.name;
+                        n.authorBio = userProfile.bio;
+                        n.authorPic = userProfile.picture;
+                        n.authorFb = userProfile.facebookUrl;
+                        const docRef = db.collection("publicNovels").doc(String(n.id));
+                        batch.update(docRef, {
+                            author: userProfile.name,
+                            authorBio: userProfile.bio,
+                            authorPic: userProfile.picture,
+                            authorFb: userProfile.facebookUrl
+                        });
+                    }
+                });
+                await batch.commit();
+                saveToStorage();
+                showToast("Profile saved successfully!", "fa-circle-check");
+            } catch(err) {
+                console.error("Cloud profile save error:", err);
+                showToast("Profile saved locally (Cloud sync failed).", "fa-triangle-exclamation");
             }
-            showToast("Profile updated globally for readers!", "fa-circle-check");
             renderProfileBooks();
         }
 
