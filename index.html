@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pocket Novels - Read & Write Stories</title>
@@ -103,26 +103,12 @@
         .reader-controls { display: flex; gap: 10px; align-items: center; }
         .theme-dot { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid #fff; }
         
-        .auth-btn {
-            background-color: rgba(255, 255, 255, 0.08); color: #e6edf3; border: 1px solid rgba(255, 255, 255, 0.15);
-            padding: 6px 14px; border-radius: 20px; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 6px; font-size: 0.85rem;
-        }
+        .auth-btn { background-color: rgba(255, 255, 255, 0.08); color: #e6edf3; border: 1px solid rgba(255, 255, 255, 0.15); padding: 6px 14px; border-radius: 20px; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 6px; font-size: 0.85rem; }
         
-        .auth-modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px);
-            display: flex; align-items: center; justify-content: center; z-index: 9999;
-        }
-        .auth-modal-content {
-            background: #161b22; border: 1px solid rgba(255, 255, 255, 0.15);
-            width: 90%; max-width: 380px; border-radius: 12px; padding: 24px; color: #e6edf3;
-        }
+        .auth-modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+        .auth-modal-content { background: #161b22; border: 1px solid rgba(255, 255, 255, 0.15); width: 90%; max-width: 380px; border-radius: 12px; padding: 24px; color: #e6edf3; }
         .auth-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .google-signin-btn {
-            width: 100%; background: #ffffff; color: #24292e; border: none;
-            padding: 10px; border-radius: 6px; font-weight: 600; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px;
-        }
+        .google-signin-btn { width: 100%; background: #ffffff; color: #24292e; border: none; padding: 10px; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
         .auth-divider { text-align: center; border-bottom: 1px solid #30363d; line-height: 0.1em; margin: 20px 0; color: #8b949e; font-size: 0.75rem; }
         .auth-divider span { background: #161b22; padding: 0 10px; }
         .auth-input { width: 100%; box-sizing: border-box; padding: 10px 12px; margin-bottom: 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #e6edf3; font-size: 0.9rem; outline: none; }
@@ -131,41 +117,18 @@
         .auth-action-btn.primary { background: #238636; color: #fff; }
         .auth-action-btn.secondary { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
 
-        #customModalOverlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0, 0, 0, 0.75); display: flex; align-items: center; justify-content: center; z-index: 20000;
-            opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
-        }
+        #customModalOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.75); display: flex; align-items: center; justify-content: center; z-index: 20000; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
         #customModalOverlay.show { opacity: 1; pointer-events: auto; }
-        .custom-modal-box {
-            background: #1e293b; border: 1px solid var(--border-color); width: 90%; max-width: 360px;
-            border-radius: var(--radius-lg); padding: 24px; color: var(--text-main); text-align: center;
-        }
+        .custom-modal-box { background: #1e293b; border: 1px solid var(--border-color); width: 90%; max-width: 360px; border-radius: var(--radius-lg); padding: 24px; color: var(--text-main); text-align: center; }
 
-        #appToast {
-            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
-            background: #1e293b; color: #f8fafc; border: 1px solid var(--primary-light);
-            padding: 12px 24px; border-radius: 30px; font-weight: 600; font-size: 0.9rem; z-index: 10000;
-            transition: transform 0.3s ease, opacity 0.3s ease; opacity: 0; display: flex; align-items: center; gap: 10px; pointer-events: none;
-        }
+        #appToast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1e293b; color: #f8fafc; border: 1px solid var(--primary-light); padding: 12px 24px; border-radius: 30px; font-weight: 600; font-size: 0.9rem; z-index: 10000; transition: transform 0.3s ease, opacity 0.3s ease; opacity: 0; display: flex; align-items: center; gap: 10px; pointer-events: none; }
         #appToast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
-        .novel-grid {
-            display: grid !important;
-            grid-template-columns: repeat(2, 1fr) !important;
-            gap: 12px !important;
-            padding: 12px 0 !important;
-        }
-
-        .novel-card {
-            background: #1e293b; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); position: relative; width: 100% !important;
-        }
-
+        .novel-grid { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; padding: 12px 0 !important; }
+        .novel-card { background: #1e293b; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); position: relative; width: 100% !important; }
         .novel-cover { width: 100% !important; height: 140px !important; object-fit: cover !important; background: #334155; cursor: pointer; }
         .genre-badge { position: absolute; top: 10px; right: 10px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(6px); color: var(--primary-light); border: 1px solid rgba(255, 255, 255, 0.1); padding: 3px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; }
         .lang-badge { position: absolute; top: 10px; left: 10px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(6px); color: var(--secondary); border: 1px solid rgba(255, 255, 255, 0.1); padding: 3px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; }
-
         .novel-info { padding: 0.8rem; flex: 1; cursor: pointer; }
         .novel-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .novel-author { font-size: 0.75rem; color: var(--primary-light); cursor: pointer; text-decoration: underline; display: inline-block; margin-bottom: 4px; }
@@ -184,7 +147,6 @@
         messagingSenderId: "136400612026",
         appId: "1:136400612026:web:cc5873486f06a5a1533083"
       };
-
       firebase.initializeApp(firebaseConfig);
       const db = firebase.firestore();
     </script>
@@ -227,7 +189,7 @@
     <main>
         <section id="exploreView" class="view-section active">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <h2 style="margin:0;">Published Novels</h2>
+                <h2 style="margin:0;">Explore Novels</h2>
                 <button class="btn btn-secondary" onclick="forceManualRefresh()" style="padding: 6px 14px; font-size: 0.8rem;"><i class="fa-solid fa-rotate"></i> Refresh Feed</button>
             </div>
             <div class="genre-filters">
@@ -247,7 +209,7 @@
         </section>
 
         <section id="libraryView" class="view-section">
-            <h2>Your Bookmarks</h2>
+            <h2>Your Library Bookmarks</h2>
             <div class="novel-grid" id="libraryGrid"></div>
         </section>
 
@@ -456,10 +418,8 @@
             document.getElementById('customModalTitle').innerText = title;
             document.getElementById('customModalText').innerText = text;
             overlay.classList.add('show');
-            
             const confirmBtn = document.getElementById('customModalConfirm');
             const cancelBtn = document.getElementById('customModalCancel');
-            
             const cleanup = () => { overlay.classList.remove('show'); confirmBtn.onclick = null; cancelBtn.onclick = null; };
             confirmBtn.onclick = () => { cleanup(); onConfirm(); };
             cancelBtn.onclick = () => { cleanup(); };
@@ -496,10 +456,9 @@
             }
         };
 
-        let cachedNovels = localStorage.getItem('pocket_novels_cache');
-        let novels = cachedNovels ? JSON.parse(cachedNovels) : [];
+        let novels = [];
         let savedBookmarks = JSON.parse(localStorage.getItem('pocket_bookmarks')) || [];
-        let authorBios = JSON.parse(localStorage.getItem('pocket_author_bios')) || {};
+        let authorBios = {};
         let userProfile = { name: "", bio: "", picture: "", facebookUrl: "" };
 
         let currentGenreFilter = 'All';
@@ -510,33 +469,22 @@
         let currentUser = null;
         let isPublishing = false;
 
-        applyFilters();
-
-        // FIXED LIVE FIRESTORE CLOUD SYNC
+        // DIRECT FIREBASE SYNC
         function initCloudSync() {
             db.collection("publicNovels").onSnapshot(snapshot => {
                 const cloudNovels = [];
                 snapshot.forEach(doc => {
                     cloudNovels.push({ id: doc.id, ...doc.data() });
                 });
-                
-                // Only replace the list when data is returned so empty events won't wipe the screen
-                if (cloudNovels.length > 0) {
-                    novels = cloudNovels;
-                    novels.sort((a, b) => Number(b.id) - Number(a.id));
-                    localStorage.setItem('pocket_novels_cache', JSON.stringify(novels));
-                    
-                    applyFilters();
-                    renderLibrary();
-                    renderProfileBooks();
-                }
-            }, err => {
-                console.error("Cloud sync error:", err);
-            });
+                novels = cloudNovels;
+                novels.sort((a, b) => Number(b.id) - Number(a.id));
+                applyFilters();
+                renderLibrary();
+                renderProfileBooks();
+            }, err => console.error("Cloud sync error:", err));
 
             db.collection("authorsDirectory").onSnapshot(snapshot => {
                 snapshot.forEach(doc => { authorBios[doc.id] = doc.data(); });
-                localStorage.setItem('pocket_author_bios', JSON.stringify(authorBios));
             });
         }
 
@@ -548,45 +496,41 @@
                 snapshot.forEach(doc => {
                     cloudNovels.push({ id: doc.id, ...doc.data() });
                 });
-                if (cloudNovels.length > 0) {
-                    novels = cloudNovels;
-                    novels.sort((a, b) => Number(b.id) - Number(a.id));
-                    localStorage.setItem('pocket_novels_cache', JSON.stringify(novels));
-                    applyFilters();
-                    renderLibrary();
-                    renderProfileBooks();
-                    showToast("Feed updated successfully!", "fa-circle-check");
-                }
+                novels = cloudNovels;
+                novels.sort((a, b) => Number(b.id) - Number(a.id));
+                applyFilters();
+                renderLibrary();
+                renderProfileBooks();
+                showToast("Feed updated successfully!", "fa-circle-check");
             } catch (e) {
-                showToast("Failed to refresh. Check internet.", "fa-triangle-exclamation");
+                showToast("Failed to refresh.", "fa-triangle-exclamation");
             }
         }
 
         initCloudSync();
 
+        // PROFILE & AUTHENTICATION
         firebase.auth().onAuthStateChanged(async (user) => {
             currentUser = user;
             const authBtn = document.getElementById('authBtn');
             if (user) {
                 if (authBtn) authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Sign Out';
                 
-                const localCache = localStorage.getItem('pocket_user_profile_' + user.uid);
-                if (localCache) {
-                    userProfile = JSON.parse(localCache);
-                    updateProfileUI();
-                    renderProfileBooks();
-                } else {
-                    userProfile = { name: user.displayName || user.email.split('@')[0], bio: "", picture: user.photoURL || "", facebookUrl: "" };
-                    updateProfileUI();
-                }
+                // Default to Google info on first sign-in
+                userProfile = { 
+                    name: user.displayName || user.email.split('@')[0], 
+                    bio: "", 
+                    picture: user.photoURL || "", 
+                    facebookUrl: "" 
+                };
 
                 try {
                     const doc = await db.collection("users").doc(user.uid).collection("appData").doc("userProfile").get();
                     if (doc.exists && doc.data().name) {
-                        userProfile = doc.data();
-                        localStorage.setItem('pocket_user_profile_' + user.uid, JSON.stringify(userProfile));
+                        userProfile = doc.data(); // Load customized profile if saved
                     }
                 } catch(e) {}
+                
                 updateProfileUI();
                 renderProfileBooks();
             } else {
@@ -667,7 +611,6 @@
             userProfile.facebookUrl = document.getElementById('editSocialInput').value.trim();
 
             try {
-                localStorage.setItem('pocket_user_profile_' + currentUser.uid, JSON.stringify(userProfile));
                 await db.collection("users").doc(currentUser.uid).collection("appData").doc("userProfile").set(userProfile, { merge: true });
                 await db.collection("authorsDirectory").doc(userProfile.name).set({ bio: userProfile.bio, picture: userProfile.picture, facebookUrl: userProfile.facebookUrl }, { merge: true });
                 updateProfileUI();
@@ -961,7 +904,7 @@
         function toggleBookmark(id) {
             if(savedBookmarks.includes(id)) {
                 savedBookmarks = savedBookmarks.filter(b => b != id);
-                showToast("Removed from bookmarks.", "fa-bookmark");
+                showToast("Removed from library.", "fa-bookmark");
             } else {
                 savedBookmarks.push(id);
                 showToast("Saved to library!", "fa-bookmark");
