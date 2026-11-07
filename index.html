@@ -77,7 +77,6 @@
         .form-control { width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; color: #fff; outline: none; }
         .form-control:focus { border-color: var(--primary); }
 
-        /* CUSTOM DARK THEME DROPDOWN SELECTOR */
         .custom-select-wrapper { position: relative; width: 100%; cursor: pointer; }
         .custom-select-selected { background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; color: #fff; display: flex; justify-content: space-between; align-items: center; }
         .custom-select-options { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; margin-top: 4px; z-index: 50; display: none; max-height: 200px; overflow-y: auto; box-shadow: 0 8px 20px rgba(0,0,0,0.5); }
@@ -513,23 +512,26 @@
 
         applyFilters();
 
-        // LIVE FIRESTORE CLOUD SYNC WITH MANUAL FORCE REFRESH SUPPORT
+        // FIXED LIVE FIRESTORE CLOUD SYNC
         function initCloudSync() {
             db.collection("publicNovels").onSnapshot(snapshot => {
                 const cloudNovels = [];
                 snapshot.forEach(doc => {
                     cloudNovels.push({ id: doc.id, ...doc.data() });
                 });
-                novels = cloudNovels;
-                novels.sort((a, b) => Number(b.id) - Number(a.id));
-                localStorage.setItem('pocket_novels_cache', JSON.stringify(novels));
                 
-                applyFilters();
-                renderLibrary();
-                renderProfileBooks();
+                // Only replace the list when data is returned so empty events won't wipe the screen
+                if (cloudNovels.length > 0) {
+                    novels = cloudNovels;
+                    novels.sort((a, b) => Number(b.id) - Number(a.id));
+                    localStorage.setItem('pocket_novels_cache', JSON.stringify(novels));
+                    
+                    applyFilters();
+                    renderLibrary();
+                    renderProfileBooks();
+                }
             }, err => {
                 console.error("Cloud sync error:", err);
-                showToast("Connection issue. Tap Refresh Feed.", "fa-triangle-exclamation");
             });
 
             db.collection("authorsDirectory").onSnapshot(snapshot => {
@@ -546,13 +548,15 @@
                 snapshot.forEach(doc => {
                     cloudNovels.push({ id: doc.id, ...doc.data() });
                 });
-                novels = cloudNovels;
-                novels.sort((a, b) => Number(b.id) - Number(a.id));
-                localStorage.setItem('pocket_novels_cache', JSON.stringify(novels));
-                applyFilters();
-                renderLibrary();
-                renderProfileBooks();
-                showToast("Feed updated successfully!", "fa-circle-check");
+                if (cloudNovels.length > 0) {
+                    novels = cloudNovels;
+                    novels.sort((a, b) => Number(b.id) - Number(a.id));
+                    localStorage.setItem('pocket_novels_cache', JSON.stringify(novels));
+                    applyFilters();
+                    renderLibrary();
+                    renderProfileBooks();
+                    showToast("Feed updated successfully!", "fa-circle-check");
+                }
             } catch (e) {
                 showToast("Failed to refresh. Check internet.", "fa-triangle-exclamation");
             }
@@ -560,7 +564,6 @@
 
         initCloudSync();
 
-        // INSTANT PROFILE CACHING AND AUTH LISTENER
         firebase.auth().onAuthStateChanged(async (user) => {
             currentUser = user;
             const authBtn = document.getElementById('authBtn');
